@@ -7,6 +7,14 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="controls">
+    <button onclick="flyToRegion('tohoku')">東北</button>
+    <button onclick="flyToRegion('kanto')">関東</button>
+    <button onclick="flyToRegion('chubu')">中部</button>
+    <button onclick="flyToRegion('kinki')">近畿</button>
+    <button onclick="flyToRegion('chugoku-shikoku')">中国・四国</button>
+    <button onclick="flyToRegion('kyushu')">九州</button>
+  </div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
@@ -943,6 +951,56 @@ map.on('load', () => {
     .addTo(map);
 });
 
+// ボタンを設置するエリア
+    const controls = document.createElement('div');
+    controls.id = 'controls';
+    controls.style.position = 'absolute';
+    controls.style.top = '0';
+    controls.style.left = '0';
+    controls.style.padding = '10px';
+    controls.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+    controls.style.zIndex = '1';
+    document.body.appendChild(controls);
+
+    // 各地方の中心座標 (経度, 緯度)
+    const regionCenters = {
+      'tohoku': [141.0, 39.0],
+      'kanto': [139.75, 35.6667],
+      'chubu': [136.9030, 35.1800],
+      'kinki': [135.7990, 34.7120],
+      'chugoku-shikoku': [135.0, 35.0],
+      'kyushu': [131.0, 33.0]
+    };
+
+    // ボタンを作成して追加
+    for (const region in regionCenters) {
+      const button = document.createElement('button');
+      button.textContent = getRegionName(region);
+      button.onclick = () => flyToRegion(region);
+      controls.appendChild(button);
+    }
+
+    function getRegionName(regionKey) {
+      switch (regionKey) {
+        case 'tohoku': return '東北';
+        case 'kanto': return '関東';
+        case 'chubu': return '中部';
+        case 'kinki': return '近畿';
+        case 'chugoku-shikoku': return '中国・四国';
+        case 'kyushu': return '九州';
+        default: return '';
+      }
+    }
+
+    function flyToRegion(region) {
+      if (regionCenters.hasOwnProperty(region)) {
+        map.flyTo({
+          center: regionCenters[region],
+          zoom: 6, // 必要に応じて調整
+          essential: true
+        });
+      }
+    }
   </script>
 </body>
 </html>
