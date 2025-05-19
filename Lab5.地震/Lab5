@@ -1,0 +1,26 @@
+const map = new maplibregl.Map({
+  container: 'map',
+  style: {
+    version: 8,
+    sources: {
+      'google-tiles': {
+        type: 'raster',
+        tiles: [
+          'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+        ],
+        tileSize: 256
+      }
+    },
+    layers: [
+      {
+        id: 'google-tiles-layer',
+        type: 'raster',
+        source: 'google-tiles',
+        minzoom: 0,
+        maxzoom: 19
+      }
+    ]
+  },
+  center: [139.7671, 35.6812],
+  zoom: 2
+});

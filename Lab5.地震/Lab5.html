@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>マップと地震データ</title>
+    <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+    body { margin: 0; padding: 0; display: flex; } /* flexboxで地図とサイドパネルを横並びにする */
+    #map { width: 80%; height: 100vh; } /* 地図の幅を調整 */
+    .sidebar {
+        width: 20%;
+        height: 100vh;
+        background-color: #f0f0f0;
+        padding: 20px;
+        box-sizing: border-box;
+        overflow-y: auto; /* 情報が多い場合にスクロール可能にする */
+    }
+    .sidebar h2 {
+        margin-top: 0;
+    }
+    .legend {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        text-align: left;
+        z-index: 1; /* 地図の上に表示 */
+    }
+    .legend-item {
+        margin-bottom: 5px;
+    }
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        display: inline-block;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    .earthquake-detail-item {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ccc;
+    }
+    .earthquake-detail-item:last-child {
+        border-bottom: none;
+    }
+    #timeline-controls {
+        position: absolute;
+        bottom: 50px;
+        left: 20px;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 1;
+    }
+    #timeline-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8em;
+    }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="timeline-controls">
+        <label for="timeline-slider">時間範囲:</label>
+        <input type="range" id="timeline-slider" min="0" max="1" value="1" step="0.01">
+        <div id="timeline-labels">
+            <span>開始</span>
+            <span>現在</span>
+        </div>
+    </div>
+    <div id="legend" class="legend">
+        <div>凡例</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #0000ff;"></span>マグニチュード 5 未満</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #ffff00;"></span>マグニチュード 5 以上 6 未満</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #ff0000;"></span>マグニチュード 6 以上</div>
+    </div>
+    <div id="sidebar" class="sidebar">
+        <h2>地震詳細</h2>
+        <div id="earthquake-details">
+            </div>
+    </div>
+    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+    <script>
+    const map = new maplibregl.Map({
+        container: 'map',
+        style: {
+            version: 8,
+            sources: {
+                'google-tiles': {
+                    type: 'raster',
+                    tiles: ['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'],
+                    tileSize: 256
+                }
+            },
+            layers: [
+                {
+                    id: 'google-tiles-layer',
+                    type: 'raster',
+                    source: 'google-tiles',
+                    minzoom: 0,
+                    maxzoom: 19
+                }
+            ]
+        },
+        center: [139.7671, 35.6812],
+        zoom: 2
+    });
+
+    map.on('load', () => {
+        // ナビゲーションコントロールの追加
+        const nav = new maplibregl.NavigationControl();
+        map.addControl(nav, 'top-left'); // 左上に表示
+
+        map.addSource('earthquakes', {
+            type: 'geojson',
+            data: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson'
+        });
+
+        map.addLayer({
+            id: 'earthquakes-layer',
+            type: 'circle',
+            source: 'earthquakes',
+            paint: {
+                'circle-radius': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'mag'],
+                    4.5, 8,
+                    7, 60
+                ],
+                'circle-color': [
+                    'case',
+                    ['<', ['get', 'mag'], 5], '#0000ff',
+                    ['<', ['get', 'mag'], 6.0], '#ffff00',
+                    '#ff0000'
+                ],
+                'circle-opacity': 0.7
+            }
+        });
+
+        const earthquakeDetailsContainer = document.getElementById('earthquake-details');
+        let selectedFeatureId = null;
+        let allEarthquakeData; // すべての地震データを保存する変数
+        const timelineSlider = document.getElementById('timeline-slider');
+        const timelineLabels = document.getElementById('timeline-labels');
+
+        function displayEarthquakeDetails(feature) {
+            earthquakeDetailsContainer.innerHTML = '';
+            if (feature && feature.properties) {
+                const props = feature.properties;
+                const details = `
+                    <div class="earthquake-detail-item"><strong>場所:</strong> ${props.place}</div>
+                    <div class="earthquake-detail-item"><strong>マグニチュード:</strong> ${props.mag}</div>
+                    <div class="earthquake-detail-item"><strong>発生時間:</strong> ${new Date(props.time)}</div>
+                    <div class="earthquake-detail-item"><strong>詳細:</strong> <a href="${props.url}" target="_blank">USGSで見る</a></div>
+                `;
+                earthquakeDetailsContainer.innerHTML = details;
+            } else {
+                earthquakeDetailsContainer.innerHTML = '<p>地震情報が選択されていません。</p>';
+            }
+        }
+
+        function updateEarthquakeLayer(currentTime) {
+            if (!allEarthquakeData) return;
+            const filteredFeatures = allEarthquakeData.filter(feature => feature.properties.time <= currentTime);
+            map.getSource('earthquakes').setData({ type: 'FeatureCollection', features: filteredFeatures });
+        }
+
+        fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson')
+            .then(response => response.json())
+            .then(data => {
+                allEarthquakeData = data.features.map(feature => {
+                    return { ...feature, properties: { ...feature.properties, time: new Date(feature.properties.time) } };
+                });
+
+                const oldestTime = new Date(Math.min(...allEarthquakeData.map(f => f.properties.time)));
+                const latestTime = new Date(Math.max(...allEarthquakeData.map(f => f.properties.time)));
+                timelineSlider.min = oldestTime.getTime();
+                timelineSlider.max = latestTime.getTime();
+                timelineSlider.value = latestTime.getTime();
+
+                timelineLabels.children[0].textContent = oldestTime.toLocaleDateString();
+                timelineLabels.children[1].textContent = latestTime.toLocaleDateString();
+
+                updateEarthquakeLayer(latestTime);
+
+                timelineSlider.addEventListener('input', () => {
+                    const selectedTime = new Date(parseInt(timelineSlider.value));
+                    updateEarthquakeLayer(selectedTime);
+                    timelineLabels.children[1].textContent = selectedTime.toLocaleDateString();
+                });
+            })
+            .catch(error => {
+                console.error('地震データ取得エラー:', error);
+            });
+
+        map.on('click', 'earthquakes-layer', (e) => {
+            if (e.features.length > 0) {
+                const clickedFeature = e.features[0];
+                displayEarthquakeDetails(clickedFeature);
+                selectedFeatureId = clickedFeature.id;
+            }
+        });
+
+        let popup;
+        map.on('mouseenter', 'earthquakes-layer', (e) => {
+            const coords = e.features[0].geometry.coordinates;
+            const props = e.features[0].properties;
+            popup = new maplibregl.Popup({ closeOnClick: false })
+                .setLngLat([coords[0], coords[1]])
+                .setHTML(`<strong>${props.place}</strong><br>Magnitude: ${props.mag}`)
+                .addTo(map);
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.on('mouseleave', 'earthquakes-layer', () => {
+            map.getCanvas().style.cursor = '';
+            if (popup) {
+                popup.remove();
+                popup = null;
+            }
+        });
+
+        function animateEarthquakes() {
+            requestAnimationFrame(animateEarthquakes);
+            map.setPaintProperty('earthquakes-layer', 'circle-radius', [
+                'interpolate',
+                ['linear'],
+                ['get', 'mag'],
+                4.5, 8 + Math.sin(Date.now() / 300) * 2,
+                7, 60 + Math.sin(Date.now() / 300) * 10
+            ]);
+        }
+
+        animateEarthquakes();
+    });
+    </script>
+</body>
+</html>
