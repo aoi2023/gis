@@ -4,7 +4,49 @@
   <meta charset="utf-8">
   <title>My First MapLibre Map</title>
   <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { margin: 0; padding: 0; display: flex; }
+    #map { flex-grow: 1; height: 100vh; }
+    #anime-sidebar {
+      width: 300px;
+      height: 100vh;
+      background-color: #f8f8f8;
+      border-left: 1px solid #ddd;
+      overflow-y: auto;
+      padding: 10px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+    #anime-search {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    #anime-list {
+      flex-grow: 1;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #anime-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    #anime-list li:hover {
+      background-color: #e0e0e0;
+    }
+    #controls {
+      position: absolute;
+      top: 0;
+      left: 0;
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      z-index: 1;
+    }
+  </style>
 </head>
 <body>
   <div id="controls">
@@ -14,8 +56,13 @@
     <button onclick="flyToRegion('kinki')">近畿</button>
     <button onclick="flyToRegion('chugoku-shikoku')">中国・四国</button>
     <button onclick="flyToRegion('kyushu')">九州</button>
+    <button onclick="showAllLocations()">全体</button> 
   </div>
   <div id="map"></div>
+  <div id="anime-sidebar">
+    <input type="text" id="anime-search" placeholder="アニメ名を検索...">
+    <ul id="anime-list"></ul>
+  </div>
 
   <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
   <script>
@@ -48,17 +95,7 @@
       zoom: 6
     });
 
-    // ポップアップ（吹き出し）を追加
-    const popup = new maplibregl.Popup({ offset: 25 })
-  .setLngLat([140.3855, 35.7652])
-  .setHTML(`
-    <h3>【アニメツーリズムインフォメーション】成田空港</h3>
-    <img src="https://animetourism88.com/wp-content/uploads/2023/12/67A9521_re.jpg" alt="成田空港の画像" style="width: 200px; height: auto;">
-    <p>日本の玄関口であり、アニメ聖地を巡る旅にとっての基点ともなる特別な存在として「アニメ聖地88」の “0番札所”に選定されている成田国際空港に、アニメ聖地への旅に関するさまざまな情報を提供する施設「アニメツーリズム インフォメーション」がオープン！</p>
-  `)
-  .addTo(map);
-
-      const locations = [
+const locations = [
   {
     lng: 140.9399,
     lat: 41.8596,
@@ -73,7 +110,7 @@
     lat: 41.2873,
     name: "青森県むつ市",
     animes: [ 
-      { title: "艦隊これくしょん -艦これ-", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Kancolle_main-1.jpg" }
+      { title: "艦隊これくしょん －艦これ－", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Kancolle_main-1.jpg" }
     ]
   },
   {
@@ -877,92 +914,83 @@
     }
 ];
 
-map.on('load', () => {
-  // カスタムアイコンのURL
-  const iconURL = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjhVvkhOzHWBWeS1FGWQIT_qMazJQojx-baEEQzBAgluLlDDtjvud9N1lyEx-kNm6fTut8MG3xcFmu2J6V2ZqdTqcxGqCimKYYRMat0VBF9DcCK2gtGqAZA5O-txWGqBofvUlzBGP1F9e4/s800/map_pin.png';
-
-  locations.forEach(loc => {
-    // 各マーカーごとに新しいカスタムアイコンのHTML要素を作成
-    const markerElement = document.createElement('img');
-    markerElement.setAttribute('src', iconURL);
-    markerElement.style.width = '32px';
-    markerElement.style.height = '32px';
-    markerElement.style.cursor = 'pointer';
-
-    let popupContent = `<h3>${loc.name}</h3><ul>`;
-    loc.animes.forEach(anime => {
-      popupContent += `<li>${anime.title}<br><img src="${anime.imageURL}" alt="${anime.title}" style="width: 80px;"></li>`;
+// アニメ名で重複を排除し、関連する全ての場所情報を保持するマップを作成
+    const uniqueAnimesMap = new Map();
+    locations.forEach(loc => {
+      loc.animes.forEach(anime => {
+        if (!uniqueAnimesMap.has(anime.title)) {
+          uniqueAnimesMap.set(anime.title, {
+            title: anime.title,
+            imageURL: anime.imageURL, // 代表画像
+            locations: []
+          });
+        }
+        uniqueAnimesMap.get(anime.title).locations.push(loc);
+      });
     });
-    popupContent += `</ul>`;
+    const uniqueAnimes = Array.from(uniqueAnimesMap.values());
 
-    new maplibregl.Marker({ element: markerElement }) // 新しい要素をMarkerに設定
-      .setLngLat([loc.lng, loc.lat])
-      .setPopup(
-        new maplibregl.Popup().setHTML(popupContent)
-      )
+    // ポップアップ（吹き出し）を追加 - 成田空港
+    const popup = new maplibregl.Popup({ offset: 25 })
+      .setLngLat([140.3855, 35.7652])
+      .setHTML(`
+        <h3>【アニメツーリズムインフォメーション】成田空港</h3>
+        <img src="https://animetourism88.com/wp-content/uploads/2023/12/67A9521_re.jpg" alt="成田空港の画像" style="width: 200px; height: auto;">
+        <p>日本の玄関口であり、アニメ聖地を巡る旅にとっての基点ともなる特別な存在として「アニメ聖地88」の “0番札所”に選定されている成田国際空港に、アニメ聖地への旅に関するさまざまな情報を提供する施設「アニメツーリズム インフォメーション」がオープン！</p>
+      `)
       .addTo(map);
-  });
-});
 
-  const bounds = new maplibregl.LngLatBounds();
-locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
-map.fitBounds(bounds, { padding: 50 });
+    const markers = []; // マーカーを保持する配列
 
-map.on('load', () => {
-  map.addSource('route', {
-    type: 'geojson',
-    data: {
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [140.3855, 35.7652], // 成田空港 (経度, 緯度)
-          [140.1062, 35.6072]  // 千葉県千葉市 (経度, 緯度)
-        ]
-      }
+    // 全ての聖地と成田空港を含む境界線を計算する関数
+    function calculateAllLocationsBounds() {
+        const bounds = new maplibregl.LngLatBounds();
+        locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
+        bounds.extend([140.3855, 35.7652]); // 成田空港の座標を追加
+        return bounds;
     }
-  });
 
-  map.addLayer({
-    id: 'route-line',
-    type: 'line',
-    source: 'route',
-    paint: {
-      'line-color': '#ff0000',
-      'line-width': 4
-    }
-  });
-});
+    map.on('load', () => {
+      const iconURL = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjhVvkhOzHWBWeS1FGWQIT_qMazJQojx-baEEQzBAgluLlDDtjvud9N1lyEx-kNm6fTut8MG3xcFmu2J6V2ZqdTqcxGqCimKYYRMat0VBF9DcCK2gtGqAZA5O-txWGqBofvUlzBGP1F9e4/s800/map_pin.png';
 
-map.on('load', () => {
-  // カスタムアイコンのURL
-  const iconURL = 'https://icooon-mono.com/i/icon_12730/icon_127301_64.png';
+      locations.forEach(loc => {
+        const markerElement = document.createElement('img');
+        markerElement.setAttribute('src', iconURL);
+        markerElement.style.width = '32px';
+        markerElement.style.height = '32px';
+        markerElement.style.cursor = 'pointer';
 
-  // カスタムアイコンのHTML要素を作成
-  const markerElement = document.createElement('img');
-  markerElement.setAttribute('src', iconURL);
-  markerElement.style.width = '32px';   // アイコンの幅を調整 (元の画像サイズに合わせて調整)
-  markerElement.style.height = '32px';  // アイコンの高さを調整 (元の画像サイズに合わせて調整)
-  markerElement.style.cursor = 'pointer'; // ホバー時のカーソル (任意)
+        let popupContent = `<h3>${loc.name}</h3><ul>`;
+        loc.animes.forEach(anime => {
+          popupContent += `<li>${anime.title}<br><img src="${anime.imageURL}" alt="${anime.title}" style="width: 80px;"></li>`;
+        });
+        popupContent += `</ul>`;
 
-  // Markerのインスタンスを作成し、カスタム要素と経度・緯度を設定
-  const marker = new maplibregl.Marker({ element: markerElement })
-    .setLngLat([140.3855, 35.7652]) // アイコンを表示する経度と緯度 (例：成田空港)
-    .addTo(map);
-});
+        const marker = new maplibregl.Marker({ element: markerElement })
+          .setLngLat([loc.lng, loc.lat])
+          .setPopup(
+            new maplibregl.Popup().setHTML(popupContent)
+          )
+          .addTo(map);
+        markers.push({ location: loc, marker: marker }); // マーカーを配列に追加
+      });
 
-// ボタンを設置するエリア
-    const controls = document.createElement('div');
-    controls.id = 'controls';
-    controls.style.position = 'absolute';
-    controls.style.top = '0';
-    controls.style.left = '0';
-    controls.style.padding = '10px';
-    controls.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-    controls.style.zIndex = '1';
-    document.body.appendChild(controls);
+      // 成田空港のマーカー
+      const naritaIconURL = 'https://icooon-mono.com/i/icon_12730/icon_127301_64.png';
+      const naritaMarkerElement = document.createElement('img');
+      naritaMarkerElement.setAttribute('src', naritaIconURL);
+      naritaMarkerElement.style.width = '32px';
+      naritaMarkerElement.style.height = '32px';
+      naritaMarkerElement.style.cursor = 'pointer';
+      new maplibregl.Marker({ element: naritaMarkerElement })
+        .setLngLat([140.3855, 35.7652])
+        .addTo(map);
 
-    // 各地方の中心座標 (経度, 緯度)
+      // 初期表示時に全てのロケーションに合わせて地図を調整
+      showAllLocations(); // 新しい関数を呼び出す
+    });
+
+    // 地域ごとの中心座標
     const regionCenters = {
       'tohoku': [141.0, 39.0],
       'kanto': [139.75, 35.6667],
@@ -971,14 +999,6 @@ map.on('load', () => {
       'chugoku-shikoku': [135.0, 35.0],
       'kyushu': [131.0, 33.0]
     };
-
-    // ボタンを作成して追加
-    for (const region in regionCenters) {
-      const button = document.createElement('button');
-      button.textContent = getRegionName(region);
-      button.onclick = () => flyToRegion(region);
-      controls.appendChild(button);
-    }
 
     function getRegionName(regionKey) {
       switch (regionKey) {
@@ -994,13 +1014,91 @@ map.on('load', () => {
 
     function flyToRegion(region) {
       if (regionCenters.hasOwnProperty(region)) {
+        // ポップアップをすべて閉じる
+        markers.forEach(markerData => {
+          markerData.marker.getPopup().remove();
+        });
         map.flyTo({
           center: regionCenters[region],
-          zoom: 7, // 必要に応じて調整
+          zoom: 7,
           essential: true
         });
       }
     }
+
+    // 全てのアニメ聖地と成田空港が画面に収まるように表示する関数
+    function showAllLocations() {
+        const bounds = calculateAllLocationsBounds();
+        // ポップアップをすべて閉じる
+        markers.forEach(markerData => {
+            markerData.marker.getPopup().remove();
+        });
+        map.fitBounds(bounds, { padding: 50 }); // 初期表示と同じパディング
+    }
+
+    // アニメリストの表示
+    const animeListElement = document.getElementById('anime-list');
+    const animeSearchInput = document.getElementById('anime-search');
+
+    function displayAnimeList(animesToDisplay) {
+      animeListElement.innerHTML = '';
+      animesToDisplay.forEach(anime => {
+        const listItem = document.createElement('li');
+        listItem.textContent = anime.title;
+        listItem.addEventListener('click', () => {
+          const animeLocations = anime.locations;
+
+          // ポップアップをすべて閉じる
+          markers.forEach(markerData => {
+            markerData.marker.getPopup().remove();
+          });
+
+          if (animeLocations.length === 1) {
+            // 単一の聖地の場合：特定のズームレベルで表示
+            const loc = animeLocations[0];
+            map.flyTo({
+              center: [loc.lng, loc.lat],
+              zoom: 10, // ★ここを希望のズームレベルに調整してください (例: 8, 9, 10など)
+              essential: true
+            });
+            // 該当するマーカーのポップアップを開く
+            const targetMarkerData = markers.find(m => m.location.lng === loc.lng && m.location.lat === loc.lat);
+            if (targetMarkerData) {
+              targetMarkerData.marker.getPopup().addTo(map);
+            }
+
+          } else if (animeLocations.length > 1) {
+            // 複数の聖地の場合：全てが画面に収まるように表示
+            const bounds = new maplibregl.LngLatBounds();
+            animeLocations.forEach(loc => {
+              bounds.extend([loc.lng, loc.lat]);
+            });
+            map.fitBounds(bounds, { padding: 50, essential: true }); // paddingも適宜調整
+
+            // 全ての関連ポップアップを開く
+            markers.forEach(markerData => {
+              if (animeLocations.some(al => al.lng === markerData.location.lng && al.lat === markerData.location.lat)) {
+                markerData.marker.getPopup().addTo(map);
+              }
+            });
+          }
+        });
+        animeListElement.appendChild(listItem);
+      });
+    }
+
+    // 初期表示
+    displayAnimeList(uniqueAnimes);
+
+    // 検索機能
+    animeSearchInput.addEventListener('input', (event) => {
+      const searchTerm = event.target.value.toLowerCase();
+      const filteredAnimes = uniqueAnimes.filter(anime =>
+        anime.title.toLowerCase().includes(searchTerm)
+      );
+      displayAnimeList(filteredAnimes);
+    });
+
   </script>
 </body>
 </html>
