@@ -1,1102 +1,369 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>My First MapLibre Map</title>
-  <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
-  <style>
-    body { margin: 0; padding: 0; display: flex; }
-    #map { flex-grow: 1; height: 100vh; }
-    #anime-sidebar {
-      width: 300px;
-      height: 100vh;
-      background-color: #f8f8f8;
-      border-left: 1px solid #ddd;
-      overflow-y: auto;
-      padding: 10px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-    }
-    #anime-search {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-      box-sizing: border-box;
-    }
-    #anime-list {
-      flex-grow: 1;
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    #anime-list li {
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-    }
-    #anime-list li:hover {
-      background-color: #e0e0e0;
-    }
-    #controls {
-      position: absolute;
-      top: 0;
-      left: 0;
-      padding: 10px;
-      background-color: rgba(255, 255, 255, 0.8);
-      z-index: 1;
-    }
-  </style>
+    <meta charset="utf-8">
+    <title>My First MapLibre Map</title>
+    <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; padding: 0; display: flex; }
+        #map { flex-grow: 1; height: 100vh; }
+        #anime-sidebar {
+            width: 300px;
+            height: 100vh;
+            background-color: #f8f8f8;
+            border-left: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        #anime-search {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        #anime-list {
+            flex-grow: 1;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #anime-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        #anime-list li:hover {
+            background-color: #e0e0e0;
+        }
+        #controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1;
+        }
+    </style>
 </head>
 <body>
-  <div id="controls">
-    <button onclick="flyToRegion('tohoku')">東北</button>
-    <button onclick="flyToRegion('kanto')">関東</button>
-    <button onclick="flyToRegion('chubu')">中部</button>
-    <button onclick="flyToRegion('kinki')">近畿</button>
-    <button onclick="flyToRegion('chugoku-shikoku')">中国・四国</button>
-    <button onclick="flyToRegion('kyushu')">九州</button>
-    <button onclick="showAllLocations()">全体</button> 
-  </div>
-  <div id="map"></div>
-  <div id="anime-sidebar">
-    <input type="text" id="anime-search" placeholder="アニメ名を検索...">
-    <ul id="anime-list"></ul>
-  </div>
+    <div id="controls">
+        <button onclick="flyToRegion('tohoku')">東北</button>
+        <button onclick="flyToRegion('kanto')">関東</button>
+        <button onclick="flyToRegion('chubu')">中部</button>
+        <button onclick="flyToRegion('kinki')">近畿</button>
+        <button onclick="flyToRegion('chugoku-shikoku')">中国・四国</button>
+        <button onclick="flyToRegion('kyushu')">九州</button>
+        <button onclick="showAllLocations()">全体</button>
+    </div>
+    <div id="map"></div>
+    <div id="anime-sidebar">
+        <input type="text" id="anime-search" placeholder="アニメ名を検索...">
+        <ul id="anime-list"></ul>
+    </div>
 
-  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
-  <script>
-    const map = new maplibregl.Map({
-	container: 'map',
-	style: {
-		version: 8,
-		sources: {
-			'google-maps': {
-				type: 'raster',
-				tiles: [
-					'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'
-				],
-				tileSize: 256,
-				attribution: '&copy; Google'
-			}
-		},
-		layers: [
-			{
-				id: 'google-maps-layer',
-				type: 'raster',
-				source: 'google-maps'
-			}
-		]
-	},
-
-      center: [140.3855, 35.7652], // 【アニメツーリズムインフォメーション】成田空港 (経度, 緯度)
-      zoom: 6
-    });
-
-const locations = [
-  {
-    lng: 140.9399,
-    lat: 41.8596,
-    name: "北海道函館市",
-    animes: [ // 複数のアニメ情報を配列で持つ
-      { title: "薄桜鬼 真改", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/key_hakuouki_shinkai_RGB-1.jpg" },
-      { title: "ラブライブ！ サンシャイン!!", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/LLSunshine_main.jpg" }
-    ]
-  },
-  {
-    lng: 141.0514,
-    lat: 41.2873,
-    name: "青森県むつ市",
-    animes: [ 
-      { title: "艦隊これくしょん －艦これ－", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Kancolle_main-1.jpg" }
-    ]
-  },
-  {
-    lng: 140.8592,
-    lat: 38.0971,
-    name: "宮城県岩沼市",
-    animes: [
-      { title: "バクテン!!", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Web_210310_bakuten_KV3_RGB_trim.jpg" }
-    ]
-  },
-  {
-    lng: 140.5252,
-    lat: 39.2513,
-    name: "秋田県横手市",
-    animes: [
-      { title: "釣りキチ三平", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Tsurikichi_main.jpg" }
-    ]
-  },
-  {
-    lng: 140.1168,
-    lat: 37.8606,
-    name: "山形県米沢市",
-    animes: [
-      { title: "好きでも嫌いなあまのじゃく", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E5%A5%BD%E3%81%8D%E3%81%A7%E3%82%82%E5%AB%8C%E3%81%84%E3%81%AA%E3%81%82%E3%81%BE%E3%81%AE%E3%81%98%E3%82%83%E3%81%8FKV%E3%83%87%E3%83%BC%E3%82%BF-scaled.jpg" }
-    ]
-  },
-  {
-    lng: 139.9762,
-    lat: 37.4520,
-    name: "福島県会津若松市",
-    animes: [
-      { title: "薄桜鬼 真改", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Hakuoki_Fukushima_sub.jpg" }
-    ]
-  },
-  {
-    lng: 140.3204,
-    lat: 37.2981,
-    name: "福島県須賀川市",
-    animes: [
-      { title: "ウルトラマンシリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/ULTRAMAN_sub.jpg" }
-    ]
-  },
-  {
-    lng: 140.5587,
-    lat: 36.2963,
-    name: "茨城県大洗町",
-    animes: [
-      { title: "ガールズ&パンツァー 最終章", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/girlsundpanzer_main.jpg" }
-    ]
-  },
-  {
-    lng: 139.6882,
-    lat: 36.3487,
-    name: "栃木県栃木市",
-    animes: [
-      { title: "秒速5センチメートル", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/5cm_main.jpg" }
-    ]
-  },
-  {
-    lng: 138.8860,
-    lat: 36.3409,
-    name: "群馬県高崎市",
-    animes: [
-      { title: "菜なれ花なれ", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E8%8F%9C%E3%81%AA%E3%82%8C%E8%8A%B1%E3%81%AA%E3%82%8C_%E5%8D%94%E4%BC%9A%E7%94%A8%E5%A0%B4%E9%9D%A2%E5%86%99_%E9%AB%98%E5%B4%8E%E5%B8%82.jpg" }
-    ]
-  },
-  {
-    lng: 139.0441,
-    lat: 36.646,
-    name: "群馬県沼田市",
-    animes: [
-      { title: "菜なれ花なれ", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E8%8F%9C%E3%81%AA%E3%82%8C%E8%8A%B1%E3%81%AA%E3%82%8C_%E5%8D%94%E4%BC%9A%E7%94%A8KV-scaled.jpg" }
-    ]
-  },
-  {
-    lng: 139.5419,
-    lat: 36.2448,
-    name: "群馬県館林市",
-    animes: [
-      { title: "宇宙よりも遠い場所", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/A.jpg" }
-    ]
-  },
-  {
-    lng: 139.6941,
-    lat: 35.9498,
-    name: "埼玉県さいたま市岩槻区",
-    animes: [
-      { title: "その着せ替え人形は恋をする", imageURL: "https://animetourism88.com/wp-content/uploads/2024/04/14_bisque_KV.jpg" }
-    ]
-  },
-  {
-    lng: 139.467866,
-    lat: 35.899944,
-    name: "埼玉県川越市",
-    animes: [
-      { title: "神様はじめました", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Kamisama_main.jpg" },
-      { title: "月がきれい", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/ecd8f95c91508ee80438554497003ec4_re.jpg" }
-    ]
-  },
-  {
-    lng: 139.0854,
-    lat: 35.9916,
-    name: "埼玉県秩父市",
-    animes: [
-      { title: "あの日見た花の名前を僕達はまだ知らない。", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Anohana_main.jpg" },
-      { title: "心が叫びたがってるんだ。", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Kokosake_main.jpg" },
-      { title: "空の青さを知る人よ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/19___re.jpg" }
-    ]
-  },
-  {
-    lng: 139.4625,
-    lat: 35.8034,
-    name: "埼玉県所沢市",
-    animes: [
-      { title: "女子高生の無駄づかい", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Web___.jpg" }
-    ]
-  },
-  {
-    lng: 139.2372,
-    lat: 35.8943,
-    name: "埼玉県飯能市",
-    animes: [
-      { title: "ヤマノススメ Next Summit", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Web_3_2.jpg" }
-    ]
-  },
-  {
-    lng: 139.6864,
-    lat: 35.8246,
-    name: "埼玉県蕨市",
-    animes: [
-      { title: "さよなら私のクラマー", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%82%AF%E3%83%A9%E3%83%9E%E3%83%BC_TV%E7%89%88_%E5%A4%89%E6%9B%B4KV.jpg" }
-    ]
-  },
-  {
-    lng: 139.6221,
-    lat: 35.7898,
-    name: "埼玉県和光市",
-    animes: [
-      { title: "『冴えない彼女の育てかた』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/shf_3_.jpg" }
-    ]
-  },
-  {
-    lng: 139.6423,
-    lat: 36.0869,
-    name: "埼玉県久喜市",
-    animes: [
-      { title: "らき☆すた", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/LuckyStar_Main.jpg" }
-    ]
-  },
-  {
-    lng: 139.0997,
-    lat: 35.9873,
-    name: "埼玉県横瀬町",
-    animes: [
-      { title: "心が叫びたがってるんだ。", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/23_-scaled.jpg" }
-    ]
-  },
-  {
-    lng: 139.1097,
-    lat: 36.1148,
-    name: "埼玉県長瀞町",
-    animes: [
-      { title: "私に天使が舞い降りた! プレシャス・フレンズ", imageURL: "https://animetourism88.com/wp-content/uploads/2024/04/26_wataten_KV.jpg" }
-    ]
-  },
-  {
-    lng: 140.1062,
-    lat: 35.6072,
-    name: "千葉県千葉市",
-    animes: [
-      { title: "青のオーケストラ", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E9%9D%92%E3%81%AE%E3%82%AA%E3%83%BC%E3%82%B1%E3%82%B9%E3%83%88%E3%83%A9_KV-scaled.jpg" },
-      { title: "『やはり俺の青春ラブコメはまちがっている。』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/3_KV__F0130.jpg" }
-    ]
-  },
-  {
-    lng: 140.7845,
-    lat: 35.7511,
-    name: "千葉県銚子市",
-    animes: [
-      { title: "『アマガミSS』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/27_SSP____re.jpg" }
-    ]
-  },
-  {
-    lng: 139.8469,
-    lat: 34.9835,
-    name: "千葉県館山市",
-    animes: [
-      { title: "映画『トラペジウム』", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%83%88%E3%83%A9%E3%83%9A%E3%82%B8%E3%82%A6%E3%83%A0_%E5%8D%94%E4%BC%9A%E7%94%A8KV-scaled.jpg" }
-    ]
-  },
-  {
-    lng: 139.39916,
-    lat: 35.714182,
-    name: "東京都立川市",
-    animes: [
-      { title: "とある科学の超電磁砲", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/48_3_20_0408_02_R2.jpg" },
-      { title: "とある魔術の禁書目録", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/3_18_0528__v01_re.jpg" }
-    ]
-  },
-  {
-    lng: 139.566,
-    lat: 35.7176,
-    name: "東京都武蔵野市",
-    animes: [
-      { title: "劇場版「SHIROBAKO」", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/50_SHIROBAKO4_R_ok.jpg" }
-    ]
-  },
-  {
-    lng: 139.3649,
-    lat: 35.7088,
-    name: "東京都昭島市",
-    animes: [
-      { title: "『ゆるキャン△』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/YRC_movie.jpg" }
-    ]
-  },
-  {
-    lng: 139.5550,
-    lat: 35.6604,
-    name: "東京都調布市",
-    animes: [
-      { title: "ゲゲゲの鬼太郎", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/fix_Re-1.jpg" }
-    ]
-  },
-  {
-      lng: 139.5092,
-      lat: 35.7010,
-      name: "東京都小金井市",
-      animes: [
-        { title: "おちこぼれフルーツタルト", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/re-5.jpg" }
-      ]
-    },
-    {
-      lng: 139.3992,
-      lat: 35.6655,
-      name: "東京都日野市",
-      animes: [
-        { title: "しかのこのこのここしたんたん", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%81%97%E3%81%8B%E3%81%AE%E3%81%93_%E5%8D%94%E4%BC%9A%E7%94%A8KV-scaled.jpg" },
-        { title: "薄桜鬼 真改", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Hakuoki_hino_sub.jpg" }
-      ]
-    },
-    {
-      lng: 139.4723,
-      lat: 35.7579,
-      name: "東京都東村山市",
-      animes: [
-        { title: "女子高生の無駄づかい", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Web___.jpg" }
-      ]
-    },
-    {
-      lng: 139.3369,
-      lat: 35.7336,
-      name: "東京都福生市",
-      animes: [
-        { title: "GAMERA -Rebirth-", imageURL: "https://animetourism88.com/wp-content/uploads/2024/05/GAMERA-_Rebirth-_KV.jpg" }
-      ]
-    },
-    {
-      lng: 139.1350,
-      lat: 34.2023,
-      name: "東京都神津島村",
-      animes: [
-        { title: "ラブライブ！スーパースター!!", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%83%A9%E3%83%96%E3%83%A9%E3%82%A4%E3%83%96%EF%BC%81%E3%82%B9%E3%83%BC%E3%83%91%E3%83%BC%E3%82%B9%E3%82%BF%E3%83%BCKV-s.jpg" }
-      ]
-    },
-    {
-      lng: 139.5950,
-      lat: 35.4527,
-      name: "神奈川県横浜市",
-      animes: [
-        { title: "文豪ストレイドッグス", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Bungo_main_re.jpg" }
-      ]
-    },
-    {
-      lng: 139.6423,
-      lat: 35.5562,
-      name: "神奈川県川崎市",
-      animes: [
-        { title: "ガールズバンドクライ", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%82%AC%E3%83%BC%E3%83%AB%E3%82%BA%E3%83%90%E3%83%B3%E3%83%89%E3%82%AF%E3%83%A9%E3%82%A4_%E5%8D%94%E4%BC%9A%E7%94%A8KV_%E6%96%87%E5%AD%97%E3%83%8A%E3%82%B7-scaled.jpg" }
-      ]
-    },
-    {
-      lng: 139.6615,
-      lat: 35.2601,
-      name: "神奈川県横須賀市",
-      animes: [
-        { title: "艦隊これくしょん －艦これ－", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Kancolle_logo-1.png" },
-        { title: "スローループ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Web_SLOWLOOP__S.jpg" },
-        { title: "ハイスクール・フリート", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/H_F_main.jpg" }
-      ]
-    },
-    {
-      lng: 139.4555,
-      lat: 35.3628,
-      name: "神奈川県藤沢市",
-      animes: [
-        { title: "青春ブタ野郎はバニーガール先輩の夢を見ない", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/2.SBY_KV1_fix_re.jpg" }
-      ]
-    },
-    {
-      lng: 139.1069,
-      lat: 35.2323,
-      name: "神奈川県箱根町",
-      animes: [
-        { title: "『エヴァンゲリオン』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/78_KV___.jpg" },
-        { title: "弱虫ペダル", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Web_YP_KV3.jpg" }
-      ]
-    },
-    {
-      lng: 139.7698,
-      lat: 35.5092,
-      name: "東京都",
-      animes: [
-        { title: "劇場版 ソードアート・オンライン -オーディナル・スケール-", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/iahk_1_T2_0716_r.jpg" }
-      ]
-    },
-    {
-      lng: 139.7189,
-      lat: 35.7118,
-      name: "東京都 都電荒川線早稲田駅近辺",
-      animes: [
-        { title: "『BanG Dream!』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/191128_BNDR3_KEY.jpg" }
-      ]
-    },
-    {
-      lng: 139.7039,
-      lat: 35.7126,
-      name: "東京都 高田馬場",
-      animes: [
-        { title: "ふれる。", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%81%B5%E3%82%8C%E3%82%8B_%E5%8D%94%E4%BC%9A%E7%94%A8KV-scaled.jpg" }
-      ]
-    },
-    {
-      lng: 139.7563,
-      lat: 35.6868,
-      name: "東京都千代田区",
-      animes: [
-        { title: "STEINS;GATE(シュタインズ・ゲート)", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Steinsgate_main.jpg" },
-        { title: "ラブライブ！", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/lovelive_key2023.jpg" }
-      ]
-    },
-    {
-      lng: 139.7758,
-      lat: 35.6713,
-      name: "東京都中央区",
-      animes: [
-        { title: "江戸前エルフ", imageURL: "https://animetourism88.com/wp-content/uploads/2024/05/34_%E5%A0%B4%E9%9D%A2%E5%86%99%E5%80%99%E8%A3%9C_%E3%82%82%E3%82%93%E3%81%98%E3%82%83%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%88%E3%82%B3%E3%83%A9%E3%83%9C%E7%89%88%E6%A8%A9.jpg" }
-      ]
-    },
-    {
-      lng: 139.7741,
-      lat: 35.6305,
-      name: "東京都港区台場",
-      animes: [
-        { title: "デジモンアドベンチャー", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/697711a5054cbf72afc46f07a936199f_re.jpg" }
-      ]
-    },
-    {
-      lng: 139.7453,
-      lat: 35.6527,
-      name: "東京都港区",
-      animes: [
-        { title: "ラブライブ！虹ヶ咲学園スクールアイドル同好会", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/lovelove_nigigaku2023main.jpg" }
-      ]
-    },
-    {
-      lng: 139.8155,
-      lat: 35.7151,
-      name: "東京都墨田区",
-      animes: [
-        { title: "リコリス・リコイル", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Web_asa__2.jpg" }
-      ]
-    },
-    {
-      lng: 139.7887,
-      lat: 35.6520,
-      name: "東京都江東区豊洲",
-      animes: [
-        { title: "アイドルマスター ミリオンライブ！", imageURL: "https://animetourism88.com/wp-content/uploads/2024/05/39_%E3%82%A2%E3%82%A4%E3%83%89%E3%83%AB%E3%83%9E%E3%82%B9%E3%82%BF%E3%83%BC%E3%83%9F%E3%83%AA%E3%82%AA%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%96.jpg" }
-      ]
-    },
-    {
-      lng: 139.8096,
-      lat: 35.6433,
-      name: "東京都江東区",
-      animes: [
-        { title: "ラブライブ！虹ヶ咲学園スクールアイドル同好会", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/re-4-3.jpg" }
-      ]
-    },
-    {
-      lng: 139.6345,
-      lat: 35.6365,
-      name: "東京都世田谷区",
-      animes: [
-        { title: "「ウルトラマンシリーズ」", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/ULTRAMAN_Setagaya_main.jpg" },
-        { title: "秒速5センチメートル", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/5cmpersecond_gotokuji_sub.jpg" },
-        { title: "ぼっち・ざ・ろっく！", imageURL: "https://animetourism88.com/wp-content/uploads/2024/04/43_%E3%81%BC%E3%81%A3%E3%81%A1%E3%83%BB%E3%81%96%E3%83%BB%E3%82%8D%E3%81%A3%E3%81%8F.jpg" }
-      ]
-    },
-    {
-      lng: 139.6926,
-      lat: 35.6668,
-      name: "東京都渋谷区",
-      animes: [
-        { title: "夜のクラゲは泳げない", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E5%A4%9C%E3%81%AE%E3%82%AF%E3%83%A9%E3%82%B2_KV-scaled.jpg" },
-        { title: "ラブライブ！スーパースター!!", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/LSPED1_023_T4_00078_re.jpg" }
-      ]
-    },
-    {
-      lng: 139.7150,
-      lat: 35.7291,
-      name: "東京都豊島区",
-      animes: [
-        { title: "『冴えない彼女の育てかた』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/shf_3_.jpg" },
-        { title: "その着せ替え人形は恋をする", imageURL: "https://animetourism88.com/wp-content/uploads/2024/05/43_bsq_sc2.jpg" },
-        { title: "デュラララ!!", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/durarara_main.jpg" },
-        { title: "『BanG Dream! 』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2024/04/BangDreamMygoKV.jpg" }
-      ]
-    },
-    {
-        lng: 139.6313,
-        lat: 35.7617,
-        name: "東京都練馬区光が丘",
-        animes: [
-          { title: "デジモンアドベンチャー", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/dm9902908-10_.jpg" }
-        ]
-      },
-      {
-        lng: 139.0852,
-        lat: 37.5398,
-        name: "新潟県三条市",
-        animes: [
-          { title: "Do It Yourself!! -どぅー・いっと・ゆあせるふ-", imageURL: "https://animetourism88.com/wp-content/uploads/2024/04/70_DIY_KV.jpg" }
-        ]
-      },
-      {
-        lng: 137.4248,
-        lat: 36.6623,
-        name: "富山県上市町",
-        animes: [
-          { title: "おおかみこどもの雨と雪", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Okamikodomo_main.jpg" }
-        ]
-      },
-      {
-        lng: 136.6871,
-        lat: 36.5061,
-        name: "石川県金沢市",
-        animes: [
-          { title: "数分間のエールを", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%80%90%E6%95%B0%E5%88%86%E9%96%93%E3%81%AE%E3%82%A8%E3%83%BC%E3%83%AB%E3%82%92%E3%80%91KV.jpg" }
-        ]
-      },
-      {
-        lng: 136.7561,
-        lat: 36.4879,
-        name: "石川県金沢市（湯涌温泉）",
-        animes: [
-          { title: "花咲くいろは", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/2ceb80a9495624c2e4af9b756bbac35c.jpg" }
-        ]
-      },
-      {
-        lng: 136.8174,
-        lat: 36.9161,
-        name: "石川県羽咋市",
-        animes: [
-          { title: "数分間のエールを", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E7%BE%BD%E5%92%8B%E5%B8%82%EF%BC%88%E5%A0%B4%E9%9D%A2%E5%86%99%EF%BC%89.png" }
-        ]
-      },
-      {
-        lng: 138.7033,
-        lat: 35.7851,
-        name: "山梨県山梨市",
-        animes: [
-          { title: "『ゆるキャン△』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/YRC_0052_T5_.jpg" }
-        ]
-      },
-      {
-        lng: 138.4034,
-        lat: 35.8407,
-        name: "山梨県北杜市",
-        animes: [
-          { title: "スーパーカブ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/6353233dd30b6449e061f11619d1c356-1.jpg" }
-        ]
-      },
-      {
-        lng: 138.4689,
-        lat: 35.4073,
-        name: "山梨県身延町",
-        animes: [
-          { title: "『ゆるキャン△』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/YRC_08_144_BDR-01.jpg" }
-        ]
-      },
-      {
-        lng: 138.2415,
-        lat: 36.3859,
-        name: "長野県上田市",
-        animes: [
-          { title: "サマーウォーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/SummerWars_main.jpg" }
-        ]
-      },
-      {
-        lng: 136.7822,
-        lat: 35.4472,
-        name: "岐阜県岐阜市",
-        animes: [
-          { title: "小市民シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E5%B0%8F%E5%B8%82%E6%B0%91%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BA_KV-scaled.jpg" }
-        ]
-      },
-      {
-        lng: 137.2034,
-        lat: 36.1452,
-        name: "岐阜県高山市",
-        animes: [
-          { title: "氷菓", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Hyoka_main.jpg" }
-        ]
-      },
-      {
-        lng: 137.1158,
-        lat: 35.3367,
-        name: "岐阜県多治見市",
-        animes: [
-          { title: "『やくならマグカップも』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/fix__re.jpg" }
-        ]
-      },
-      {
-        lng: 136.8701,
-        lat: 36.2296,
-        name: "岐阜県白川村",
-        animes: [
-          { title: "ひぐらしのなく頃に 業・卒", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/RGB__re.jpg" }
-        ]
-      },
-      {
-        lng: 138.9099,
-        lat: 34.9213,
-        name: "静岡県伊豆市",
-        animes: [
-          { title: "化け猫あんずちゃん", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E5%8C%96%E3%81%91%E7%8C%AB%E3%81%82%E3%82%93%E3%81%9A%E3%81%A1%E3%82%83%E3%82%93KV-scaled.jpg" }
-        ]
-      },
-      {
-        lng: 137.7728,
-        lat: 34.9758,
-        name: "静岡県浜松市",
-        animes: [
-          { title: "『エヴァンゲリオン』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/eva_sub.jpg" },
-          { title: "『ゆるキャン△』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/yurucamp_animation_main_logo_ex_RGB_ol-01.png" }
-        ]
-      },
-      {
-        lng: 138.8382,
-        lat: 35.0788,
-        name: "静岡県沼津市",
-        animes: [
-          { title: "ラブライブ！サンシャイン!!", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/LLS02_086_t1_F080_0080s.jpg" }
-        ]
-      },
-      {
-        lng: 138.1191,
-        lat: 35.1598,
-        name: "静岡県川根本町",
-        animes: [
-          { title: "『ゆるキャン△』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%82%86%E3%82%8B%E3%82%AD%E3%83%A3%E3%83%B33%E6%9C%9FKV_%E6%9A%AB%E5%AE%9A.jpg" }
-        ]
-      },
-      {
-        lng: 136.9263,
-        lat: 35.1471,
-        name: "愛知県名古屋市",
-        animes: [
-          { title: "シキザクラ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Web_KV.jpg" },
-          { title: "『ゆるキャン△』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/YRC_movie.jpg" }
-        ]
-      },
-      {
-        lng: 137.3108,
-        lat: 35.1408,
-        name: "愛知県豊田市",
-        animes: [
-          { title: "シキザクラ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/Shikizakura_sceanTOYOTA.jpeg" }
-        ]
-      },
-      {
-        lng: 137.4038,
-        lat: 34.7544,
-        name: "愛知県豊橋市",
-        animes: [
-          { title: "負けヒロインが多すぎる！", imageURL: "https://animetourism88.com/wp-content/uploads/2025/03/%E3%83%9E%E3%82%B1%E3%82%A4%E3%83%B3_%E5%8D%94%E4%BC%9A%E7%94%A8KV_c.jpg" }
-        ]
-      },
-      {
-        lng: 136.0424,
-        lat: 33.9109,
-        name: "三重県熊野市",
-        animes: [
-          { title: "凪のあすから", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/NaginAsukara_main.jpg" }
-        ]
-      },
-      {
-        lng: 135.7188,
-        lat: 35.0981,
-        name: "京都府京都市",
-        animes: [
-          { title: "薄桜鬼 真改", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/HakuokiShinkai_Kyoto.jpg" }
-        ]
-      },
-      {
-        lng: 135.3229,
-        lat: 35.547271,
-        name: "京都府舞鶴市",
-        animes: [
-          { title: "艦隊これくしょん －艦これ－", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Kancolle_main-1.jpg" }
-        ]
-      },
-      {
-        lng: 135.7606,
-        lat: 34.8029,
-        name: "京都府京田辺市",
-        animes: [
-          { title: "一休さん", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Ikkyusan_main.jpg" }
-        ]
-      },
-      {
-        lng: 135.3069,
-        lat: 34.7751,
-        name: "兵庫県西宮市",
-        animes: [
-          { title: "『涼宮ハルヒの憂鬱』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/ea33dcf06dd4491f3c1ac95486a4396d_re.jpg" }
-        ]
-      },
-      {
-        lng: 133.7316,
-        lat: 35.3947,
-        name: "鳥取県倉吉市",
-        animes: [
-          { title: "ひなビタ♪", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Hinabita_main.jpg" }
-        ]
-      },
-      {
-        lng: 133.2350,
-        lat: 35.5143,
-        name: "鳥取県境港市",
-        animes: [
-          { title: "ゲゲゲの鬼太郎", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/fix_Re.jpg" }
-        ]
-      },
-      {
-        lng: 133.9312,
-        lat: 34.7336,
-        name: "岡山県岡山市",
-        animes: [
-          { title: "推しが武道館いってくれたら死ぬ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Web_KV_poster_b2_3_illust_tate.jpg" }
-        ]
-      },
-      {
-      lng: 132.6574,
-      lat: 34.1805,
-      name: "広島県呉市",
-      animes: [
-        { title: "艦隊これくしょん －艦これ－", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Kancolle_logo-1.png" }
-      ]
-    },
-    {
-      lng: 132.8969,
-      lat: 34.3623,
-      name: "広島県竹原市",
-      animes: [
-        { title: "たまゆら", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/tamayura_main.jpg" }
-      ]
-    },
-    {
-      lng: 132.8715,
-      lat: 34.8049,
-      name: "広島県三次市",
-      animes: [
-        { title: "朝霧の巫女", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Asagirinimiko_mainRGB.jpg" }
-      ]
-    },
-    {
-      lng: 131.2819,
-      lat: 34.0429,
-      name: "山口県宇部市",
-      animes: [
-        { title: "『エヴァンゲリオン』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/78_KV___.jpg" }
-      ]
-    },
-    {
-      lng: 133.5935,
-      lat: 34.0889,
-      name: "香川県観音寺市",
-      animes: [
-        { title: "『結城友奈は勇者である』シリーズ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/YukiYuna_main.jpg" }
-      ]
-    },
-    {
-      lng: 134.1844,
-      lat: 34.5117,
-      name: "香川県土庄町",
-      animes: [
-        { title: "からかい上手の高木さん３", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/103_3_mainvisual_ferry_noriba_r3.jpg" }
-      ]
-    },
-    {
-      lng: 132.7088,
-      lat: 33.8923,
-      name: "愛媛県松山市",
-      animes: [
-        { title: "がんばっていきまっしょい", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%81%8C%E3%82%93%E3%81%B0%E3%81%A3%E3%81%A6%E3%81%84%E3%81%8D%E3%81%BE%E3%81%A3%E3%81%97%E3%82%87%E3%81%84KV-scaled.jpg" }
-      ]
-    },
-    {
-      lng: 133.2285,
-      lat: 33.5387,
-      name: "高知県越知町",
-      animes: [
-        { title: "竜とそばかすの姫", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/4e03be6a655b8a44fde000e8e5be04cc.jpg" }
-      ]
-    },
-    {
-      lng: 130.8561,
-      lat: 33.8714,
-      name: "福岡県北九州市",
-      animes: [
-        { title: "ブルバスター", imageURL: "https://animetourism88.com/wp-content/uploads/2024/04/107_BULLUBUSTER_KV.jpg" }
-      ]
-    },
-    {
-      lng: 129.7673,
-      lat: 32.7586,
-      name: "長崎県長崎市",
-      animes: [
-        { title: "色づく世界の明日から", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/iahk_1_T2_0716_r-1.jpg" },
-        { title: "きみの色", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E3%81%8D%E3%81%BF%E3%81%AE%E8%89%B2_KV-scaled.jpg" }
-      ]
-    },
-    {
-      lng: 129.4643,
-      lat: 33.1962,
-      name: "長崎県佐世保市",
-      animes: [
-        { title: "艦隊これくしょん －艦これ－", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Kancolle_main.jpg" },
-        { title: "きみの色", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/Kimi_no_Iro_%E4%BD%90%E4%B8%96%E4%BF%9D%E5%B8%82.jpg" }
-      ]
-    },
-    {
-      lng: 129.3318,
-      lat: 34.4056,
-      name: "長崎県対馬市",
-      animes: [
-        { title: "アンゴルモア元寇合戦記", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Fix0430_re.jpg" },
-        { title: "GAMERA -Rebirth-", imageURL: "https://animetourism88.com/wp-content/uploads/2024/05/gr_sc.jpg" }
-      ]
-    },
-    {
-      lng: 128.5560,
-      lat: 32.4320,
-      name: "長崎県五島市",
-      animes: [
-        { title: "蒼の彼方のフォーリズム", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Web_No96__KeyVisual_R2_RGB.jpg" },
-        { title: "きみの色", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/Kimi_no_Iro_%E4%BA%94%E5%B3%B6%E5%B8%82.jpg" }
-      ]
-    },
-    {
-      lng: 129.0634,
-      lat: 32.9886,
-      name: "長崎県新上五島町",
-      animes: [
-        { title: "蒼の彼方のフォーリズム", imageURL: "https://animetourism88.com/wp-content/uploads/2023/09/Web_.jpg" },
-        { title: "きみの色", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/Kimi_no_Iro_%E6%96%B0%E4%B8%8A%E4%BA%94%E5%B3%B6%E7%94%BA.jpg" }
-      ]
-    },
-    {
-      lng: 130.7649,
-      lat: 32.195191,
-      name: "熊本県人吉市・球磨地域ほか",
-      animes: [
-        { title: "夏目友人帳", imageURL: "https://animetourism88.com/wp-content/uploads/2025/02/%E5%A4%8F%E7%9B%AE%E5%8F%8B%E4%BA%BA%E5%B8%B3_%E3%82%AD%E3%83%BC%E3%83%93%E3%82%B8%E3%83%A5%E3%82%A2%E3%83%AB-scaled.jpg" }
-      ]
-    },
-    {
-      lng: 130.5481,
-      lat: 32.2965,
-      name: "熊本県芦北町",
-      animes: [
-        { title: "放課後ていぼう日誌", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/r.jpg" }
-      ]
-    },
-    {
-      lng: 130.9788,
-      lat: 30.6095,
-      name: "鹿児島県種子島",
-      animes: [
-        { title: "秒速5センチメートル", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/5cmpersec_tane_sub.jpg" }
-      ]
-    },
-    {
-      lng: 127.8288,
-      lat: 26.1624,
-      name: "沖縄県南城市",
-      animes: [
-        { title: "白い砂のアクアトープ", imageURL: "https://animetourism88.com/wp-content/uploads/2023/12/uthk_KEY2_FUKA.jpg" }
-      ]
-    }
-];
-
-// アニメ名で重複を排除し、関連する全ての場所情報を保持するマップを作成
-    const uniqueAnimesMap = new Map();
-    locations.forEach(loc => {
-      loc.animes.forEach(anime => {
-        if (!uniqueAnimesMap.has(anime.title)) {
-          uniqueAnimesMap.set(anime.title, {
-            title: anime.title,
-            imageURL: anime.imageURL, // 代表画像
-            locations: []
-          });
-        }
-        uniqueAnimesMap.get(anime.title).locations.push(loc);
-      });
-    });
-    const uniqueAnimes = Array.from(uniqueAnimesMap.values());
-
-    // ポップアップ（吹き出し）を追加 - 成田空港
-    const popup = new maplibregl.Popup({ offset: 25 })
-      .setLngLat([140.3855, 35.7652])
-      .setHTML(`
-        <h3>【アニメツーリズムインフォメーション】成田空港</h3>
-        <img src="https://animetourism88.com/wp-content/uploads/2023/12/67A9521_re.jpg" alt="成田空港の画像" style="width: 200px; height: auto;">
-        <p>日本の玄関口であり、アニメ聖地を巡る旅にとっての基点ともなる特別な存在として「アニメ聖地88」の “0番札所”に選定されている成田国際空港に、アニメ聖地への旅に関するさまざまな情報を提供する施設「アニメツーリズム インフォメーション」がオープン！</p>
-      `)
-      .addTo(map);
-
-    const markers = []; // マーカーを保持する配列
-
-    // 全ての聖地と成田空港を含む境界線を計算する関数
-    function calculateAllLocationsBounds() {
-        const bounds = new maplibregl.LngLatBounds();
-        locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
-        bounds.extend([140.3855, 35.7652]); // 成田空港の座標を追加
-        return bounds;
-    }
-
-    map.on('load', () => {
-      const iconURL = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjhVvkhOzHWBWeS1FGWQIT_qMazJQojx-baEEQzBAgluLlDDtjvud9N1lyEx-kNm6fTut8MG3xcFmu2J6V2ZqdTqcxGqCimKYYRMat0VBF9DcCK2gtGqAZA5O-txWGqBofvUlzBGP1F9e4/s800/map_pin.png';
-
-      locations.forEach(loc => {
-        const markerElement = document.createElement('img');
-        markerElement.setAttribute('src', iconURL);
-        markerElement.style.width = '32px';
-        markerElement.style.height = '32px';
-        markerElement.style.cursor = 'pointer';
-
-        let popupContent = `<h3>${loc.name}</h3><ul>`;
-        loc.animes.forEach(anime => {
-          popupContent += `<li>${anime.title}<br><img src="${anime.imageURL}" alt="${anime.title}" style="width: 80px;"></li>`;
+    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+    <script>
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: {
+                version: 8,
+                sources: {
+                    'google-maps': {
+                        type: 'raster',
+                        tiles: [
+                            'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'
+                        ],
+                        tileSize: 256,
+                        attribution: '&copy; Google'
+                    }
+                },
+                layers: [
+                    {
+                        id: 'google-maps-layer',
+                        type: 'raster',
+                        source: 'google-maps'
+                    }
+                ]
+            },
+            center: [140.3855, 35.7652], // 【アニメツーリズムインフォメーション】成田空港 (経度, 緯度)
+            zoom: 6
         });
-        popupContent += `</ul>`;
 
-        const marker = new maplibregl.Marker({ element: markerElement })
-          .setLngLat([loc.lng, loc.lat])
-          .setPopup(
-            new maplibregl.Popup().setHTML(popupContent)
-          )
-          .addTo(map);
-        markers.push({ location: loc, marker: marker }); // マーカーを配列に追加
-      });
+        // これらの変数は、データが読み込まれた後に設定されます
+        let locations = [];
+        let uniqueAnimes = []; // 初期化はするが、データは後で設定
+        const markers = []; // マーカーを保持する配列
 
-      // 成田空港のマーカー
-      const naritaIconURL = 'https://icooon-mono.com/i/icon_12730/icon_127301_64.png';
-      const naritaMarkerElement = document.createElement('img');
-      naritaMarkerElement.setAttribute('src', naritaIconURL);
-      naritaMarkerElement.style.width = '32px';
-      naritaMarkerElement.style.height = '32px';
-      naritaMarkerElement.style.cursor = 'pointer';
-      new maplibregl.Marker({ element: naritaMarkerElement })
-        .setLngLat([140.3855, 35.7652])
-        .addTo(map);
+        // Function to fetch and process data
+        async function loadAnimeData() {
+            try {
+                const response = await fetch('anime_locations.csv'); // CSVファイルへのパス
+                const csvText = await response.text();
 
-      // 初期表示時に全てのロケーションに合わせて地図を調整
-      showAllLocations(); // 新しい関数を呼び出す
-    });
+                locations = parseCsvData(csvText); // 新しい関数を呼び出す
 
-    // 地域ごとの中心座標
-    const regionCenters = {
-      'tohoku': [141.0, 39.0],
-      'kanto': [139.75, 35.6667],
-      'chubu': [136.9030, 35.1800],
-      'kinki': [135.7990, 34.7120],
-      'chugoku-shikoku': [135.0, 35.0],
-      'kyushu': [131.0, 33.0]
-    };
+                // データがロードされ、locationsが設定された後に、マップとサイドバーを初期化
+                initializeMapAndSidebar();
 
-    function getRegionName(regionKey) {
-      switch (regionKey) {
-        case 'tohoku': return '東北';
-        case 'kanto': return '関東';
-        case 'chubu': return '中部';
-        case 'kinki': return '近畿';
-        case 'chugoku-shikoku': return '中国・四国';
-        case 'kyushu': return '九州';
-        default: return '';
-      }
-    }
-
-    function flyToRegion(region) {
-      if (regionCenters.hasOwnProperty(region)) {
-        // ポップアップをすべて閉じる
-        markers.forEach(markerData => {
-          markerData.marker.getPopup().remove();
-        });
-        map.flyTo({
-          center: regionCenters[region],
-          zoom: 7,
-          essential: true
-        });
-      }
-    }
-
-    // 全てのアニメ聖地と成田空港が画面に収まるように表示する関数
-    function showAllLocations() {
-        const bounds = calculateAllLocationsBounds();
-        // ポップアップをすべて閉じる
-        markers.forEach(markerData => {
-            markerData.marker.getPopup().remove();
-        });
-        map.fitBounds(bounds, { padding: 50 }); // 初期表示と同じパディング
-    }
-
-    // アニメリストの表示
-    const animeListElement = document.getElementById('anime-list');
-    const animeSearchInput = document.getElementById('anime-search');
-
-    function displayAnimeList(animesToDisplay) {
-      animeListElement.innerHTML = '';
-      animesToDisplay.forEach(anime => {
-        const listItem = document.createElement('li');
-        listItem.textContent = anime.title;
-        listItem.addEventListener('click', () => {
-          const animeLocations = anime.locations;
-
-          // ポップアップをすべて閉じる
-          markers.forEach(markerData => {
-            markerData.marker.getPopup().remove();
-          });
-
-          if (animeLocations.length === 1) {
-            // 単一の聖地の場合：特定のズームレベルで表示
-            const loc = animeLocations[0];
-            map.flyTo({
-              center: [loc.lng, loc.lat],
-              zoom: 13, // ★ここを希望のズームレベルに調整してください (例: 8, 9, 10など)
-              essential: true
-            });
-            // 該当するマーカーのポップアップを開く
-            const targetMarkerData = markers.find(m => m.location.lng === loc.lng && m.location.lat === loc.lat);
-            if (targetMarkerData) {
-              targetMarkerData.marker.getPopup().addTo(map);
+            } catch (error) {
+                console.error('Error loading anime data:', error);
+                alert('アニメデータの読み込みに失敗しました。ファイルが正しい形式で存在することを確認してください。');
             }
+        }
 
-          } else if (animeLocations.length > 1) {
-            // 複数の聖地の場合：全てが画面に収まるように表示
-            const bounds = new maplibregl.LngLatBounds();
-            animeLocations.forEach(loc => {
-              bounds.extend([loc.lng, loc.lat]);
+        // CSVデータをパースし、locations配列の形式に変換する関数
+        function parseCsvData(csvText) {
+            const lines = csvText.trim().split('\n');
+            // ヘッダー行が空の場合があるため、フィルターで空文字列を除外
+            const headers = lines[0].split(',').map(header => header.trim()).filter(Boolean);
+            const dataRows = lines.slice(1);
+
+            const tempLocationsMap = new Map(); // 地名ごとにデータをまとめるためのMap
+
+            dataRows.forEach(row => {
+                // 空行や不正な行をスキップ
+                if (!row.trim()) return;
+
+                const values = row.split(',').map(value => value.trim()); // 各セルをトリム
+
+                // ヘッダーと値の数が一致しない場合はスキップ
+                if (values.length !== headers.length) {
+                    console.warn('CSV行の列数がヘッダーと一致しません:', row);
+                    return;
+                }
+
+                const rowData = {};
+                headers.forEach((header, index) => {
+                    rowData[header] = values[index];
+                });
+
+                const name = rowData.name;
+                const lat = parseFloat(rowData.lat);
+                const lng = parseFloat(rowData.lng);
+                const title = rowData.title;
+                const imageURL = rowData.imageURL;
+
+                // 必須データ（name, lat, lng, title, imageURL）が存在するかチェック
+                if (!name || isNaN(lat) || isNaN(lng) || !title || !imageURL) {
+                    console.warn('CSV行に必要なデータが不足しています。スキップします:', rowData);
+                    return;
+                }
+
+                if (!tempLocationsMap.has(name)) {
+                    tempLocationsMap.set(name, {
+                        name: name,
+                        lat: lat,
+                        lng: lng,
+                        animes: []
+                    });
+                }
+                tempLocationsMap.get(name).animes.push({
+                    title: title,
+                    imageURL: imageURL
+                });
             });
-            map.fitBounds(bounds, { padding: 50, essential: true }); // paddingも適宜調整
 
-            // 全ての関連ポップアップを開く
+            return Array.from(tempLocationsMap.values());
+        }
+
+        // initializeMapAndSidebar 関数内の変更点
+        function initializeMapAndSidebar() {
+            // アニメ名で重複を排除し、関連する全ての場所情報を保持するマップを作成
+            // この処理はlocationsがロードされた後に行う必要があるため、ここに移動
+            const uniqueAnimesMap = new Map();
+            locations.forEach(loc => {
+                loc.animes.forEach(anime => {
+                    if (!uniqueAnimesMap.has(anime.title)) {
+                        uniqueAnimesMap.set(anime.title, {
+                            title: anime.title,
+                            imageURL: anime.imageURL, // 代表画像
+                            locations: []
+                        });
+                    }
+                    uniqueAnimesMap.get(anime.title).locations.push(loc);
+                });
+            });
+            // グローバルスコープのuniqueAnimes変数を更新
+            uniqueAnimes = Array.from(uniqueAnimesMap.values());
+
+            // ポップアップ（吹き出し）を追加 - 成田空港
+            const popup = new maplibregl.Popup({ offset: 25 })
+                .setLngLat([140.3855, 35.7652])
+                .setHTML(`
+                    <h3>【アニメツーリズムインフォメーション】成田空港</h3>
+                    <img src="https://animetourism88.com/wp-content/uploads/2023/12/67A9521_re.jpg" alt="成田空港の画像" style="width: 200px; height: auto;">
+                    <p>日本の玄関口であり、アニメ聖地を巡る旅にとっての基点ともなる特別な存在として「アニメ聖地88」の “0番札所”に選定されている成田国際空港に、アニメ聖地への旅に関するさまざまな情報を提供する施設「アニメツーリズム インフォメーション」がオープン！</p>
+                `)
+                .addTo(map);
+
+            map.on('load', () => {
+                const iconURL = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjhVvkhOzHWBWeS1FGWQIT_qMazJQojx-baEEQzBAgluLlDDtjvud9N1lyEx-kNm6fTut8MG3xcFmu2J6V2ZqdTqcxGqCimKYYRMat0VBF9DcCK2gtGqAZA5O-txWGqBofvUlzBGP1F9e4/s800/map_pin.png';
+
+                locations.forEach(loc => {
+                    const markerElement = document.createElement('img');
+                    markerElement.setAttribute('src', iconURL);
+                    markerElement.style.width = '32px';
+                    markerElement.style.height = '32px';
+                    markerElement.style.cursor = 'pointer';
+
+                    let popupContent = `<h3>${loc.name}</h3><ul>`;
+                    loc.animes.forEach(anime => {
+                        popupContent += `<li>${anime.title}<br><img src="${anime.imageURL}" alt="${anime.title}" style="width: 180px;"></li>`;
+                    });
+                    popupContent += `</ul>`;
+
+                    const marker = new maplibregl.Marker({ element: markerElement })
+                        .setLngLat([loc.lng, loc.lat])
+                        .setPopup(
+                            new maplibregl.Popup().setHTML(popupContent)
+                        )
+                        .addTo(map);
+                    markers.push({ location: loc, marker: marker }); // マーカーを配列に追加
+                });
+
+                // Narita Airport marker
+                const naritaIconURL = 'https://icooon-mono.com/i/icon_12730/icon_127301_64.png';
+                const naritaMarkerElement = document.createElement('img');
+                naritaMarkerElement.setAttribute('src', naritaIconURL);
+                naritaMarkerElement.style.width = '32px';
+                naritaMarkerElement.style.height = '32px';
+                naritaMarkerElement.style.cursor = 'pointer';
+                new maplibregl.Marker({ element: naritaMarkerElement })
+                    .setLngLat([140.3855, 35.7652])
+                    .addTo(map);
+
+                // Adjust map to fit all locations on initial load
+                showAllLocations();
+            });
+
+            // アニメリストの表示と検索機能の初期化は、uniqueAnimesが準備された後に行う
+            const animeListElement = document.getElementById('anime-list');
+            const animeSearchInput = document.getElementById('anime-search');
+
+            // 初期表示
+            displayAnimeList(uniqueAnimes);
+
+            // 検索機能
+            animeSearchInput.addEventListener('input', (event) => {
+                const searchTerm = event.target.value.toLowerCase();
+                const filteredAnimes = uniqueAnimes.filter(anime =>
+                    anime.title.toLowerCase().includes(searchTerm)
+                );
+                displayAnimeList(filteredAnimes);
+            });
+        }
+
+        // 地域ごとの中心座標 (これらの関数はどこにあっても問題ありません)
+        const regionCenters = {
+            'tohoku': [141.0, 39.0],
+            'kanto': [139.75, 35.6667],
+            'chubu': [136.9030, 35.1800],
+            'kinki': [135.7990, 34.7120],
+            'chugoku-shikoku': [135.0, 35.0],
+            'kyushu': [131.0, 33.0]
+        };
+
+        function getRegionName(regionKey) {
+            switch (regionKey) {
+                case 'tohoku': return '東北';
+                case 'kanto': return '関東';
+                case 'chubu': return '中部';
+                case 'kinki': return '近畿';
+                case 'chugoku-shikoku': return '中国・四国';
+                case 'kyushu': return '九州';
+                default: return '';
+            }
+        }
+
+        function flyToRegion(region) {
+            if (regionCenters.hasOwnProperty(region)) {
+                // ポップアップをすべて閉じる
+                markers.forEach(markerData => {
+                    markerData.marker.getPopup().remove();
+                });
+                map.flyTo({
+                    center: regionCenters[region],
+                    zoom: 7,
+                    essential: true
+                });
+            }
+        }
+
+        // 全てのアニメ聖地と成田空港が画面に収まるように表示する関数
+        function showAllLocations() {
+            const bounds = calculateAllLocationsBounds();
+            // ポップアップをすべて閉じる
             markers.forEach(markerData => {
-              if (animeLocations.some(al => al.lng === markerData.location.lng && al.lat === markerData.location.lat)) {
-                markerData.marker.getPopup().addTo(map);
-              }
+                markerData.marker.getPopup().remove();
             });
-          }
-        });
-        animeListElement.appendChild(listItem);
-      });
-    }
+            map.fitBounds(bounds, { padding: 50 }); // 初期表示と同じパディング
+        }
 
-    // 初期表示
-    displayAnimeList(uniqueAnimes);
+        // calculateAllLocationsBounds 関数 (locationsがグローバルで利用可能なので、ここでも問題ありません)
+        function calculateAllLocationsBounds() {
+            const bounds = new maplibregl.LngLatBounds();
+            locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
+            bounds.extend([140.3855, 35.7652]); // 成田空港の座標を追加
+            return bounds;
+        }
 
-    // 検索機能
-    animeSearchInput.addEventListener('input', (event) => {
-      const searchTerm = event.target.value.toLowerCase();
-      const filteredAnimes = uniqueAnimes.filter(anime =>
-        anime.title.toLowerCase().includes(searchTerm)
-      );
-      displayAnimeList(filteredAnimes);
-    });
+        // アニメリストの表示 (これらの関数はどこにあっても問題ありませんが、
+        // displayAnimeListはuniqueAnimesを、animeSearchInputはDOMを参照するので、
+        // initializeMapAndSidebar内で呼び出すのが適切です)
+        function displayAnimeList(animesToDisplay) {
+            const animeListElement = document.getElementById('anime-list'); // ここで取得し直してもよい
+            animeListElement.innerHTML = '';
+            animesToDisplay.forEach(anime => {
+                const listItem = document.createElement('li');
+                listItem.textContent = anime.title;
+                listItem.addEventListener('click', () => {
+                    const animeLocations = anime.locations;
 
-  </script>
+                    // ポップアップをすべて閉じる
+                    markers.forEach(markerData => {
+                        markerData.marker.getPopup().remove();
+                    });
+
+                    if (animeLocations.length === 1) {
+                        // 単一の聖地の場合：特定のズームレベルで表示
+                        const loc = animeLocations[0];
+                        map.flyTo({
+                            center: [loc.lng, loc.lat],
+                            zoom: 13, // ★ここを希望のズームレベルに調整してください (例: 8, 9, 10など)
+                            essential: true
+                        });
+                        // 該当するマーカーのポップアップを開く
+                        const targetMarkerData = markers.find(m => m.location.lng === loc.lng && m.location.lat === loc.lat);
+                        if (targetMarkerData) {
+                            targetMarkerData.marker.getPopup().addTo(map);
+                        }
+
+                    } else if (animeLocations.length > 1) {
+                        // 複数の聖地の場合：全てが画面に収まるように表示
+                        const bounds = new maplibregl.LngLatBounds();
+                        animeLocations.forEach(loc => {
+                            bounds.extend([loc.lng, loc.lat]);
+                        });
+                        map.fitBounds(bounds, { padding: 50, essential: true }); // paddingも適宜調整
+
+                        // 全ての関連ポップアップを開く
+                        markers.forEach(markerData => {
+                            if (animeLocations.some(al => al.lng === markerData.location.lng && al.lat === markerData.location.lat)) {
+                                markerData.marker.getPopup().addTo(map);
+                            }
+                        });
+                    }
+                });
+                animeListElement.appendChild(listItem);
+            });
+        }
+
+        // ファイル読み込みを開始する
+        loadAnimeData();
+
+    </script>
 </body>
 </html>
