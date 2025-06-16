@@ -5,8 +5,19 @@
     <title>My First MapLibre Map</title>
     <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
-        body { margin: 0; padding: 0; display: flex; }
-        #map { flex-grow: 1; height: 100vh; }
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh; /* ここを追加 */
+            display: flex;
+            overflow-x: hidden; /* ここを追加 */
+        }
+        #map {
+            flex-grow: 1;
+            height: 100vh;
+            width: 100%; /* ここを追加 */
+            position: relative; /* ここを追加 (MapLibre GL JS の推奨) */
+        }
         #anime-sidebar {
             width: 300px;
             height: 100vh;
