@@ -2,23 +2,23 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My First MapLibre Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> <title>My First MapLibre Map</title>
     <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
         body {
             margin: 0;
             padding: 0;
-            height: 100vh; /* ここを追加 */
+            height: 100vh;
             display: flex;
-            overflow-x: hidden; /* ここを追加 */
+            overflow-x: hidden;
         }
         #map {
             flex-grow: 1;
             height: 100vh;
-            width: 100%; /* ここを追加 */
-            position: relative; /* ここを追加 (MapLibre GL JS の推奨) */
+            width: 100%;
+            position: relative;
         }
+        /* アニメサイドバーのスタイル変更 */
         #anime-sidebar {
             width: 300px;
             height: 100vh;
@@ -29,7 +29,27 @@
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
+            transform: translateX(0); /* 初期状態は表示 */
+            transition: transform 0.3s ease-in-out; /* スムーズなアニメーション */
         }
+        /* サイドバーが非表示のときのクラス */
+        #anime-sidebar.collapsed {
+            transform: translateX(100%); /* 右に完全に隠す */
+        }
+        /* スマホ画面サイズでのサイドバーの調整 */
+        @media (max-width: 768px) { /* タブレットやスマホの一般的なブレークポイント */
+            #anime-sidebar {
+                position: absolute; /* マップの上に重ねる */
+                right: 0;
+                top: 0;
+                width: 80%; /* スマホでの幅を調整 (例: 画面の80%) */
+                /* transform: translateX(100%); はJSで初期設定 */
+                box-shadow: -2px 0 5px rgba(0,0,0,0.2); /* 影を追加して分かりやすくする */
+                z-index: 100; /* マップより手前に表示 */
+            }
+        }
+
+
         #anime-search {
             width: 100%;
             padding: 8px;
@@ -50,6 +70,8 @@
         #anime-list li:hover {
             background-color: #e0e0e0;
         }
+
+        /* コントロールボタンのスタイル変更 */
         #controls {
             position: absolute;
             top: 0;
@@ -57,12 +79,89 @@
             padding: 10px;
             background-color: rgba(255, 255, 255, 0.8);
             z-index: 1;
+            border-bottom-right-radius: 5px; /* 角を丸くする */
+            transition: all 0.3s ease-in-out; /* スムーズなアニメーション */
+            display: flex; /* ボタンを横並びにする */
+            flex-wrap: wrap; /* 画面が小さい場合に折り返す */
+            gap: 5px; /* ボタン間の隙間 */
+        }
+        /* コントロールボタンが折りたたまれたときのスタイル */
+        #controls.collapsed {
+            padding: 5px;
+            background-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            /* 折りたたまれた状態での幅と高さはコンテンツによって自動調整される */
+        }
+        /* 折りたたまれたコントロールボタン内のボタンを非表示にする（トグルボタンを除く） */
+        #controls.collapsed button:not(#toggle-controls-button) {
+            display: none;
+        }
+
+        /* スマホ画面サイズでのコントロールボタンの調整 */
+        @media (max-width: 768px) {
+            #controls {
+                position: absolute;
+                top: 10px; /* 少し下にずらす */
+                left: 10px; /* 少し右にずらす */
+                padding: 5px;
+                background-color: rgba(255, 255, 255, 0.8);
+                border-radius: 5px; /* 全体を丸くする */
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                z-index: 10; /* サイドバーよりは下、マップよりは上 */
+                max-width: calc(100% - 20px); /* 画面幅に合わせて最大幅を設定 */
+            }
+            #controls button {
+                margin: 0; /* flexboxのgapを使うのでマージンは0に */
+                padding: 5px 8px;
+                font-size: 0.9em;
+            }
+        }
+
+
+        /* 新しいトグルボタンのスタイル */
+        .toggle-button {
+            position: absolute; /* 絶対配置 */
+            background-color: #007bff; /* 青色のボタン */
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 101; /* サイドバーやコントロールより手前に */
+        }
+        #toggle-sidebar-button {
+            top: 10px; /* マップの右上 */
+            right: 10px;
+        }
+        #toggle-controls-button {
+            /* controls内に配置されるため、position: static または relative でOK */
+            background-color: #28a745; /* 緑色のボタン */
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 3px; /* 少し小さめに */
+            box-shadow: none; /* 親の影を使うか、個別に設定 */
+        }
+        /* スマートフォンでのトグルボタンの位置調整 */
+        @media (max-width: 768px) {
+            #toggle-sidebar-button {
+                top: 10px;
+                right: 10px;
+                padding: 6px 10px;
+                font-size: 0.8em;
+            }
+            #toggle-controls-button {
+                padding: 6px 10px;
+                font-size: 0.8em;
+            }
         }
     </style>
 </head>
 <body>
     <div id="controls">
-        <button onclick="flyToRegion('tohoku')">東北</button>
+        <button id="toggle-controls-button">≡</button> <button onclick="flyToRegion('tohoku')">東北</button>
         <button onclick="flyToRegion('kanto')">関東</button>
         <button onclick="flyToRegion('chubu')">中部</button>
         <button onclick="flyToRegion('kinki')">近畿</button>
@@ -75,6 +174,7 @@
         <input type="text" id="anime-search" placeholder="アニメ名を検索...">
         <ul id="anime-list"></ul>
     </div>
+    <button id="toggle-sidebar-button" class="toggle-button">聖地リスト ▶</button>
 
     <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
     <script>
@@ -104,20 +204,17 @@
             zoom: 6
         });
 
-        // これらの変数は、データが読み込まれた後に設定されます
         let locations = [];
-        let uniqueAnimes = []; // 初期化はするが、データは後で設定
-        const markers = []; // マーカーを保持する配列
+        let uniqueAnimes = [];
+        const markers = [];
 
-        // Function to fetch and process data
         async function loadAnimeData() {
             try {
-                const response = await fetch('anime_locations.csv'); // CSVファイルへのパス
+                const response = await fetch('anime_locations.csv');
                 const csvText = await response.text();
 
-                locations = parseCsvData(csvText); // 新しい関数を呼び出す
+                locations = parseCsvData(csvText);
 
-                // データがロードされ、locationsが設定された後に、マップとサイドバーを初期化
                 initializeMapAndSidebar();
 
             } catch (error) {
@@ -126,22 +223,18 @@
             }
         }
 
-        // CSVデータをパースし、locations配列の形式に変換する関数
         function parseCsvData(csvText) {
             const lines = csvText.trim().split('\n');
-            // ヘッダー行が空の場合があるため、フィルターで空文字列を除外
             const headers = lines[0].split(',').map(header => header.trim()).filter(Boolean);
             const dataRows = lines.slice(1);
 
-            const tempLocationsMap = new Map(); // 地名ごとにデータをまとめるためのMap
+            const tempLocationsMap = new Map();
 
             dataRows.forEach(row => {
-                // 空行や不正な行をスキップ
                 if (!row.trim()) return;
 
-                const values = row.split(',').map(value => value.trim()); // 各セルをトリム
+                const values = row.split(',').map(value => value.trim());
 
-                // ヘッダーと値の数が一致しない場合はスキップ
                 if (values.length !== headers.length) {
                     console.warn('CSV行の列数がヘッダーと一致しません:', row);
                     return;
@@ -158,7 +251,6 @@
                 const title = rowData.title;
                 const imageURL = rowData.imageURL;
 
-                // 必須データ（name, lat, lng, title, imageURL）が存在するかチェック
                 if (!name || isNaN(lat) || isNaN(lng) || !title || !imageURL) {
                     console.warn('CSV行に必要なデータが不足しています。スキップします:', rowData);
                     return;
@@ -181,27 +273,22 @@
             return Array.from(tempLocationsMap.values());
         }
 
-        // initializeMapAndSidebar 関数内の変更点
         function initializeMapAndSidebar() {
-            // アニメ名で重複を排除し、関連する全ての場所情報を保持するマップを作成
-            // この処理はlocationsがロードされた後に行う必要があるため、ここに移動
             const uniqueAnimesMap = new Map();
             locations.forEach(loc => {
                 loc.animes.forEach(anime => {
                     if (!uniqueAnimesMap.has(anime.title)) {
                         uniqueAnimesMap.set(anime.title, {
                             title: anime.title,
-                            imageURL: anime.imageURL, // 代表画像
+                            imageURL: anime.imageURL,
                             locations: []
                         });
                     }
                     uniqueAnimesMap.get(anime.title).locations.push(loc);
                 });
             });
-            // グローバルスコープのuniqueAnimes変数を更新
             uniqueAnimes = Array.from(uniqueAnimesMap.values());
 
-            // ポップアップ（吹き出し）を追加 - 成田空港
             const popup = new maplibregl.Popup({ offset: 25 })
                 .setLngLat([140.3855, 35.7652])
                 .setHTML(`
@@ -228,40 +315,38 @@
                     popupContent += `</ul>`;
 
                     const marker = new maplibregl.Marker({
-    element: markerElement,
-    anchor: 'bottom' // ピンの先端を座標に合わせる
-})
+                        element: markerElement,
+                        anchor: 'bottom' // ここにanchorを追加
+                    })
                         .setLngLat([loc.lng, loc.lat])
                         .setPopup(
                             new maplibregl.Popup().setHTML(popupContent)
                         )
                         .addTo(map);
-                    markers.push({ location: loc, marker: marker }); // マーカーを配列に追加
+                    markers.push({ location: loc, marker: marker });
                 });
 
-                // Narita Airport marker
                 const naritaIconURL = 'https://icooon-mono.com/i/icon_12730/icon_127301_64.png';
                 const naritaMarkerElement = document.createElement('img');
                 naritaMarkerElement.setAttribute('src', naritaIconURL);
                 naritaMarkerElement.style.width = '32px';
                 naritaMarkerElement.style.height = '32px';
                 naritaMarkerElement.style.cursor = 'pointer';
-                new maplibregl.Marker({ element: naritaMarkerElement })
+                new maplibregl.Marker({
+                    element: naritaMarkerElement,
+                    anchor: 'bottom' // ここにanchorを追加
+                })
                     .setLngLat([140.3855, 35.7652])
                     .addTo(map);
 
-                // Adjust map to fit all locations on initial load
                 showAllLocations();
             });
 
-            // アニメリストの表示と検索機能の初期化は、uniqueAnimesが準備された後に行う
             const animeListElement = document.getElementById('anime-list');
             const animeSearchInput = document.getElementById('anime-search');
 
-            // 初期表示
             displayAnimeList(uniqueAnimes);
 
-            // 検索機能
             animeSearchInput.addEventListener('input', (event) => {
                 const searchTerm = event.target.value.toLowerCase();
                 const filteredAnimes = uniqueAnimes.filter(anime =>
@@ -271,7 +356,6 @@
             });
         }
 
-        // 地域ごとの中心座標 (これらの関数はどこにあっても問題ありません)
         const regionCenters = {
             'tohoku': [141.0, 39.0],
             'kanto': [139.75, 35.6667],
@@ -295,7 +379,6 @@
 
         function flyToRegion(region) {
             if (regionCenters.hasOwnProperty(region)) {
-                // ポップアップをすべて閉じる
                 markers.forEach(markerData => {
                     markerData.marker.getPopup().remove();
                 });
@@ -307,29 +390,23 @@
             }
         }
 
-        // 全てのアニメ聖地と成田空港が画面に収まるように表示する関数
         function showAllLocations() {
             const bounds = calculateAllLocationsBounds();
-            // ポップアップをすべて閉じる
             markers.forEach(markerData => {
                 markerData.marker.getPopup().remove();
             });
-            map.fitBounds(bounds, { padding: 50 }); // 初期表示と同じパディング
+            map.fitBounds(bounds, { padding: 50 });
         }
 
-        // calculateAllLocationsBounds 関数 (locationsがグローバルで利用可能なので、ここでも問題ありません)
         function calculateAllLocationsBounds() {
             const bounds = new maplibregl.LngLatBounds();
             locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
-            bounds.extend([140.3855, 35.7652]); // 成田空港の座標を追加
+            bounds.extend([140.3855, 35.7652]);
             return bounds;
         }
 
-        // アニメリストの表示 (これらの関数はどこにあっても問題ありませんが、
-        // displayAnimeListはuniqueAnimesを、animeSearchInputはDOMを参照するので、
-        // initializeMapAndSidebar内で呼び出すのが適切です)
         function displayAnimeList(animesToDisplay) {
-            const animeListElement = document.getElementById('anime-list'); // ここで取得し直してもよい
+            const animeListElement = document.getElementById('anime-list');
             animeListElement.innerHTML = '';
             animesToDisplay.forEach(anime => {
                 const listItem = document.createElement('li');
@@ -337,34 +414,29 @@
                 listItem.addEventListener('click', () => {
                     const animeLocations = anime.locations;
 
-                    // ポップアップをすべて閉じる
                     markers.forEach(markerData => {
                         markerData.marker.getPopup().remove();
                     });
 
                     if (animeLocations.length === 1) {
-                        // 単一の聖地の場合：特定のズームレベルで表示
                         const loc = animeLocations[0];
                         map.flyTo({
                             center: [loc.lng, loc.lat],
-                            zoom: 13, // ★ここを希望のズームレベルに調整してください (例: 8, 9, 10など)
+                            zoom: 13,
                             essential: true
                         });
-                        // 該当するマーカーのポップアップを開く
                         const targetMarkerData = markers.find(m => m.location.lng === loc.lng && m.location.lat === loc.lat);
                         if (targetMarkerData) {
                             targetMarkerData.marker.getPopup().addTo(map);
                         }
 
                     } else if (animeLocations.length > 1) {
-                        // 複数の聖地の場合：全てが画面に収まるように表示
                         const bounds = new maplibregl.LngLatBounds();
                         animeLocations.forEach(loc => {
                             bounds.extend([loc.lng, loc.lat]);
                         });
-                        map.fitBounds(bounds, { padding: 50, essential: true }); // paddingも適宜調整
+                        map.fitBounds(bounds, { padding: 50, essential: true });
 
-                        // 全ての関連ポップアップを開く
                         markers.forEach(markerData => {
                             if (animeLocations.some(al => al.lng === markerData.location.lng && al.lat === markerData.location.lat)) {
                                 markerData.marker.getPopup().addTo(map);
@@ -375,6 +447,45 @@
                 animeListElement.appendChild(listItem);
             });
         }
+
+        // サイドバーのトグル機能
+        const animeSidebar = document.getElementById('anime-sidebar');
+        const toggleSidebarButton = document.getElementById('toggle-sidebar-button');
+
+        // 初期状態でスマホではサイドバーを隠す
+        if (window.innerWidth <= 768) {
+            animeSidebar.classList.add('collapsed');
+            toggleSidebarButton.textContent = '聖地リスト ◀'; // ボタンのテキストも変更
+        }
+
+        toggleSidebarButton.addEventListener('click', () => {
+            if (animeSidebar.classList.contains('collapsed')) {
+                animeSidebar.classList.remove('collapsed');
+                toggleSidebarButton.textContent = '聖地リスト ▶'; // 開いた状態のテキスト
+            } else {
+                animeSidebar.classList.add('collapsed');
+                toggleSidebarButton.textContent = '聖地リスト ◀'; // 閉じた状態のテキスト
+            }
+        });
+
+        // 地域ジャンプボタンのトグル機能
+        const controlsContainer = document.getElementById('controls');
+        const toggleControlsButton = document.getElementById('toggle-controls-button');
+
+        // 初期状態でスマホではコントロールを折りたたむ
+        if (window.innerWidth <= 768) {
+            controlsContainer.classList.add('collapsed');
+        }
+
+        toggleControlsButton.addEventListener('click', () => {
+            controlsContainer.classList.toggle('collapsed');
+            if (controlsContainer.classList.contains('collapsed')) {
+                toggleControlsButton.textContent = '≡'; // 閉じた状態
+            } else {
+                toggleControlsButton.textContent = '×'; // 開いた状態
+            }
+        });
+
 
         // ファイル読み込みを開始する
         loadAnimeData();
