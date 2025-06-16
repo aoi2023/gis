@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>My First MapLibre Map</title>
     <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
@@ -226,7 +227,10 @@
                     });
                     popupContent += `</ul>`;
 
-                    const marker = new maplibregl.Marker({ element: markerElement })
+                    const marker = new maplibregl.Marker({
+    element: markerElement,
+    anchor: 'bottom' // ピンの先端を座標に合わせる
+})
                         .setLngLat([loc.lng, loc.lat])
                         .setPopup(
                             new maplibregl.Popup().setHTML(popupContent)
