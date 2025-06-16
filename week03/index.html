@@ -2,7 +2,8 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> <title>My First MapLibre Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My First MapLibre Map</title>
     <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
         body {
@@ -74,23 +75,22 @@
         /* コントロールボタンのスタイル変更 */
         #controls {
             position: absolute;
-            top: 0;
-            left: 0;
+            bottom: 0; /* 変更 */
+            left: 0;   /* 変更 */
             padding: 10px;
             background-color: rgba(255, 255, 255, 0.8);
             z-index: 1;
-            border-bottom-right-radius: 5px; /* 角を丸くする */
-            transition: all 0.3s ease-in-out; /* スムーズなアニメーション */
-            display: flex; /* ボタンを横並びにする */
-            flex-wrap: wrap; /* 画面が小さい場合に折り返す */
-            gap: 5px; /* ボタン間の隙間 */
+            border-top-right-radius: 5px; /* 変更 */
+            transition: all 0.3s ease-in-out;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
         }
         /* コントロールボタンが折りたたまれたときのスタイル */
         #controls.collapsed {
             padding: 5px;
             background-color: rgba(255, 255, 255, 0.6);
             box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            /* 折りたたまれた状態での幅と高さはコンテンツによって自動調整される */
         }
         /* 折りたたまれたコントロールボタン内のボタンを非表示にする（トグルボタンを除く） */
         #controls.collapsed button:not(#toggle-controls-button) {
@@ -101,17 +101,17 @@
         @media (max-width: 768px) {
             #controls {
                 position: absolute;
-                top: 10px; /* 少し下にずらす */
-                left: 10px; /* 少し右にずらす */
+                bottom: 10px; /* 変更 */
+                left: 10px;   /* 変更 */
                 padding: 5px;
                 background-color: rgba(255, 255, 255, 0.8);
-                border-radius: 5px; /* 全体を丸くする */
+                border-radius: 5px;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                z-index: 10; /* サイドバーよりは下、マップよりは上 */
-                max-width: calc(100% - 20px); /* 画面幅に合わせて最大幅を設定 */
+                z-index: 10;
+                max-width: calc(100% - 20px);
             }
             #controls button {
-                margin: 0; /* flexboxのgapを使うのでマージンは0に */
+                margin: 0;
                 padding: 5px 8px;
                 font-size: 0.9em;
             }
@@ -120,29 +120,28 @@
 
         /* 新しいトグルボタンのスタイル */
         .toggle-button {
-            position: absolute; /* 絶対配置 */
-            background-color: #007bff; /* 青色のボタン */
+            position: absolute;
+            background-color: #007bff;
             color: white;
             border: none;
             padding: 8px 12px;
             cursor: pointer;
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 101; /* サイドバーやコントロールより手前に */
+            z-index: 101;
         }
         #toggle-sidebar-button {
-            top: 10px; /* マップの右上 */
+            top: 10px;
             right: 10px;
         }
         #toggle-controls-button {
-            /* controls内に配置されるため、position: static または relative でOK */
-            background-color: #28a745; /* 緑色のボタン */
+            background-color: #28a745;
             color: white;
             border: none;
             padding: 8px 12px;
             cursor: pointer;
-            border-radius: 3px; /* 少し小さめに */
-            box-shadow: none; /* 親の影を使うか、個別に設定 */
+            border-radius: 3px;
+            box-shadow: none;
         }
         /* スマートフォンでのトグルボタンの位置調整 */
         @media (max-width: 768px) {
@@ -161,7 +160,8 @@
 </head>
 <body>
     <div id="controls">
-        <button id="toggle-controls-button">≡</button> <button onclick="flyToRegion('tohoku')">東北</button>
+        <button id="toggle-controls-button">≡</button>
+        <button onclick="flyToRegion('tohoku')">東北</button>
         <button onclick="flyToRegion('kanto')">関東</button>
         <button onclick="flyToRegion('chubu')">中部</button>
         <button onclick="flyToRegion('kinki')">近畿</button>
@@ -200,7 +200,7 @@
                     }
                 ]
             },
-            center: [140.3855, 35.7652], // 【アニメツーリズムインフォメーション】成田空港 (経度, 緯度)
+            center: [140.3855, 35.7652],
             zoom: 6
         });
 
@@ -316,7 +316,7 @@
 
                     const marker = new maplibregl.Marker({
                         element: markerElement,
-                        anchor: 'bottom' // ここにanchorを追加
+                        anchor: 'bottom'
                     })
                         .setLngLat([loc.lng, loc.lat])
                         .setPopup(
@@ -334,7 +334,7 @@
                 naritaMarkerElement.style.cursor = 'pointer';
                 new maplibregl.Marker({
                     element: naritaMarkerElement,
-                    anchor: 'bottom' // ここにanchorを追加
+                    anchor: 'bottom'
                 })
                     .setLngLat([140.3855, 35.7652])
                     .addTo(map);
@@ -448,31 +448,27 @@
             });
         }
 
-        // サイドバーのトグル機能
         const animeSidebar = document.getElementById('anime-sidebar');
         const toggleSidebarButton = document.getElementById('toggle-sidebar-button');
 
-        // 初期状態でスマホではサイドバーを隠す
         if (window.innerWidth <= 768) {
             animeSidebar.classList.add('collapsed');
-            toggleSidebarButton.textContent = '聖地リスト ◀'; // ボタンのテキストも変更
+            toggleSidebarButton.textContent = '聖地リスト ◀';
         }
 
         toggleSidebarButton.addEventListener('click', () => {
             if (animeSidebar.classList.contains('collapsed')) {
                 animeSidebar.classList.remove('collapsed');
-                toggleSidebarButton.textContent = '聖地リスト ▶'; // 開いた状態のテキスト
+                toggleSidebarButton.textContent = '聖地リスト ▶';
             } else {
                 animeSidebar.classList.add('collapsed');
-                toggleSidebarButton.textContent = '聖地リスト ◀'; // 閉じた状態のテキスト
+                toggleSidebarButton.textContent = '聖地リスト ◀';
             }
         });
 
-        // 地域ジャンプボタンのトグル機能
         const controlsContainer = document.getElementById('controls');
         const toggleControlsButton = document.getElementById('toggle-controls-button');
 
-        // 初期状態でスマホではコントロールを折りたたむ
         if (window.innerWidth <= 768) {
             controlsContainer.classList.add('collapsed');
         }
@@ -480,16 +476,13 @@
         toggleControlsButton.addEventListener('click', () => {
             controlsContainer.classList.toggle('collapsed');
             if (controlsContainer.classList.contains('collapsed')) {
-                toggleControlsButton.textContent = '≡'; // 閉じた状態
+                toggleControlsButton.textContent = '≡';
             } else {
-                toggleControlsButton.textContent = '×'; // 開いた状態
+                toggleControlsButton.textContent = '×';
             }
         });
 
-
-        // ファイル読み込みを開始する
         loadAnimeData();
-
     </script>
 </body>
 </html>
