@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Chiba 1km Mesh Population Map</title>
+		<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+		<link
+			href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css"
+			rel="stylesheet"
+		/>
+		<style>
+			body {
+				margin: 0;
+				padding: 0;
+			}
+			#map {
+				width: 100%;
+				height: 100vh;
+			}
+            /* 地図タイトル用のスタイル */
+            #map-title {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                z-index: 1; /* 地図の上に表示されるようにする */
+                background-color: rgba(255, 255, 255, 0.8); /* 半透明の背景 */
+                padding: 10px 15px;
+                border-radius: 5px;
+                font-family: sans-serif;
+                color: #333;
+                font-size: 20px;
+                font-weight: bold;
+            }
+            /* 凡例用のスタイル */
+            #legend {
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+                z-index: 1; /* 地図の上に表示されるようにする */
+                background-color: rgba(255, 255, 255, 0.8); /* 半透明の背景 */
+                padding: 10px 15px;
+                border-radius: 5px;
+                font-family: sans-serif;
+                color: #333;
+            }
+            .legend-item {
+                display: flex;
+                align-items: center;
+                margin-bottom: 5px;
+            }
+            .legend-color-box {
+                width: 20px;
+                height: 20px;
+                margin-right: 10px;
+                border: 1px solid #ccc;
+            }
+
+            /* ポップアップの背景色を半透明にするためのスタイル */
+            .maplibregl-popup-content {
+                background: rgba(255, 255, 255, 0.8) !important; /* 半透明の白 */
+                padding: 8px 12px !important;
+                font-family: sans-serif;
+                font-size: 14px;
+                color: #333;
+            }
+            /* ポップアップの三角部分の背景色も合わせる */
+            .maplibregl-popup-tip {
+                border-top-color: rgba(255, 255, 255, 0.8) !important;
+                border-bottom-color: rgba(255, 255, 255, 0.8) !important;
+                border-left-color: rgba(255, 255, 255, 0.8) !important;
+                border-right-color: rgba(255, 255, 255, 0.8) !important;
+            }
+		</style>
+	</head>
+	<body>
+		<div id="map"></div>
+
+        <div id="map-title">1kmメッシュの千葉県人口</div>
+
+        <div id="legend">
+  <h4>人口 (人)</h4>
+
+  <div class="legend-item">
+    <div class="legend-color-box" style="background-color: #ffffff;"></div>
+    <span>0 ～ 10</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color-box" style="background-color: #b2dfdb;"></div>
+    <span>11 ～ 30</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color-box" style="background-color: #66bb6a;"></div>
+    <span>31 ～ 50</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color-box" style="background-color: #4fc3f7;"></div>
+    <span>51 ～ 100</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color-box" style="background-color: #2196f3;"></div>
+    <span>101 ～ 300</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color-box" style="background-color: #0d47a1;"></div>
+    <span>301 ～ 600</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color-box" style="background-color: #ffa500;"></div>
+    <span>601 ～ 999</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color-box" style="background-color: #ff0000;"></div>
+    <span>1000 以上</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-color-box" style="background-color: #000000; border: 1px solid #ccc;"></div>
+    <span>データなし</span>
+  </div>
+</div>
+        </div>
+
+		<script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+		<script>
+			const map = new maplibregl.Map({
+				container: 'map',
+				style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+				center: [140.12, 35.60], // Adjusted center for Chiba
+				zoom: 9
+			});
+
+			map.on('load', () => {
+				map.addSource('chiba', {
+					type: 'geojson',
+					data: 'tiba_population.geojson'
+				});
+
+				map.addLayer({
+					id: 'population-layer',
+					type: 'fill',
+					source: 'chiba',
+					paint: {
+						'fill-color': [
+  'case',
+  ['==', ['get', 'T000841001'], null], '#000000', // データなし → 黒
+
+  ['>=', ['get', 'T000841001'], 1000], '#ff0000',  // 1000～ → 赤
+  ['>=', ['get', 'T000841001'], 601],  '#ffa500',  // 601～999 → オレンジ
+  ['>=', ['get', 'T000841001'], 301],  '#0d47a1',  // 301～600 → 濃い青
+  ['>=', ['get', 'T000841001'], 101],  '#2196f3',  // 101～300 → 青
+  ['>=', ['get', 'T000841001'], 51],   '#4fc3f7',  // 51～100 → 水色
+  ['>=', ['get', 'T000841001'], 31],   '#66bb6a',  // 31～50 → 緑（濃く）
+  ['>=', ['get', 'T000841001'], 11],   '#b2dfdb',  // 11～30 → ミント（濃く）
+  ['>=', ['get', 'T000841001'], 0],    '#ffffff',  // 0～10 → 白
+
+  '#000000' // 念のためのデフォルト
+],
+						'fill-opacity': 0.75,
+						'fill-outline-color': '#ffffff'
+					}
+				});
+
+                // ポップアップオブジェクトを初期化 (表示はしない)
+                const popup = new maplibregl.Popup({
+                    closeButton: false, // ツールチップなので閉じるボタンは不要
+                    closeOnClick: false // クリックで閉じない
+                });
+
+                // マウスがレイヤー上を移動したときのイベントリスナー
+                map.on('mousemove', 'population-layer', (e) => {
+                    if (e.features.length > 0) {
+                        const feature = e.features[0];
+                        const population = feature.properties.T000841001;
+                        let description = 'データなし';
+
+                        // 人口データが存在する場合のみ表示
+                        if (population !== null && population !== undefined) {
+                            description = `人口: ${population} 人`;
+                        } else {
+                            // null値の場合でも、メッシュIDなど他の情報を表示することもできます
+                            description = `人口: データなし`;
+                        }
+
+                        // ポップアップの表示位置をマウスカーソルの位置に設定し、内容を更新して表示
+                        popup.setLngLat(e.lngLat).setHTML(description).addTo(map);
+
+                        // マウスカーソルをポインターに変更
+                        map.getCanvas().style.cursor = 'pointer';
+                    }
+                });
+
+                // マウスがレイヤーから離れたときのイベントリスナー
+                map.on('mouseleave', 'population-layer', () => {
+                    // ポップアップを削除
+                    popup.remove();
+                    // マウスカーソルをデフォルトに戻す
+                    map.getCanvas().style.cursor = '';
+                });
+			});
+		</script>
+	</body>
+</html>
