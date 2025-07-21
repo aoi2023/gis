@@ -185,29 +185,43 @@
             }
         }
 
-        /* サイドバートグルボタンのスタイル */
+        /* サイドバートグルボタンのスタイル (画像アイコン用) */
         #toggle-sidebar-button {
-            position: absolute; /* 親コンテナ (#anime-sidebar-container) を基準に配置 */
-            left: -120px; /* ボタンの幅と少しのマージン (例: 幅100px + マージン20px) */
+            position: absolute;
+            left: -50px; /* アイコンの幅に合わせて調整 (例: 32px + マージン18px = 50px) */
             top: 10px;
-            background-color: #EAF7CF; /* 背景色をEAF7CFに維持 */
-            color: #6D4DA3; /* 文字色を6D4DA3に維持 */
+            width: 40px; /* アイコンの幅 */
+            height: 40px; /* アイコンの高さ */
+            background-color: #EAF7CF; /* ボタンの背景色 */
+            background-image: url('https://aoi2023.github.io/gis/week03/Search%20icon.png'); /* アイコン画像 */
+            background-size: 28px 28px; /* アイコンのサイズを調整 */
+            background-repeat: no-repeat;
+            background-position: center;
             border: none;
-            padding: 8px 12px;
+            padding: 0; /* 画像を使用するためパディングを0に */
             cursor: pointer;
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 102; /* サイドバーコンテンツよりも手前に表示 */
-            /* transition は親コンテナで行うため不要 */
-            white-space: nowrap; /* ボタン内のテキストが改行されないように */
+            z-index: 102;
+            transition: transform 0.3s ease-in-out; /* 回転アニメーション */
+        }
+
+        /* サイドバーが閉じている（collapsed）ときのボタンの回転 */
+        #anime-sidebar-container.collapsed #toggle-sidebar-button {
+            transform: rotateY(180deg); /* 左右反転 */
+        }
+        /* サイドバーが開いているときのボタンの回転（デフォルト状態） */
+        #anime-sidebar-container:not(.collapsed) #toggle-sidebar-button {
+            transform: rotateY(0deg);
         }
 
         /* スマホ画面サイズでのトグルボタンの位置調整 */
         @media (max-width: 768px) {
             #toggle-sidebar-button {
-                left: -100px; /* スマホ用 (ボタンが小さい場合に合わせて調整) */
-                padding: 6px 10px;
-                font-size: 0.8em;
+                left: -50px; /* スマホ用も同様に調整 */
+                width: 35px; /* スマホでの幅調整 */
+                height: 35px; /* スマホでの高さ調整 */
+                background-size: 25px 25px; /* スマホでのアイコンサイズ調整 */
             }
         }
 
@@ -296,7 +310,7 @@
     <div id="map"></div>
     
     <div id="anime-sidebar-container">
-        <button id="toggle-sidebar-button">聖地リスト ▶</button>
+        <button id="toggle-sidebar-button"></button> 
 
         <div id="anime-sidebar-content">
             <input type="text" id="anime-search" placeholder="アニメ名を検索...">
@@ -672,6 +686,7 @@
         /**
          * 指定された地域に地図を移動させる関数。
          * @param {string} region - 移動先の地域キー (例: 'kanto')
+         * @returns {void}
          */
         function flyToRegion(region) {
             if (regionCenters.hasOwnProperty(region)) {
@@ -695,6 +710,7 @@
 
         /**
          * 全てのアニメ聖地と成田空港が画面に収まるように地図の表示範囲を調整する関数。
+         * @returns {void}
          */
         function showAllLocations() {
             const bounds = calculateAllLocationsBounds(); // 全体の境界を計算
@@ -728,6 +744,7 @@
          * 指定されたアニメのリストをサイドバーに表示する関数。
          * 各アニメをクリックすると、関連する聖地が地図上に表示されます。
          * @param {Array<Object>} animesToDisplay - 表示するアニメの配列
+         * @returns {void}
          */
         function displayAnimeList(animesToDisplay) {
             const animeListElement = document.getElementById('anime-list');
@@ -736,10 +753,11 @@
                 const listItem = document.createElement('li');
                 listItem.textContent = anime.title; // アニメタイトルを設定
                 listItem.addEventListener('click', () => {
-                    // サイドバーが閉じている場合、開く (animeSidebarContainerを参照)
+                    // サイドバーが閉じている場合、開く
                     if (animeSidebarContainer.classList.contains('collapsed')) {
                         animeSidebarContainer.classList.remove('collapsed');
-                        toggleSidebarButton.textContent = '聖地リスト ▶';
+                        // アイコンも回転させる
+                        toggleSidebarButton.style.transform = 'rotateY(0deg)';
                     }
 
                     const animeLocations = anime.locations; // そのアニメに関連する聖地
@@ -792,21 +810,21 @@
         // そして、ボタンの位置も初期状態に合わせて設定
         if (window.innerWidth <= 768) {
             animeSidebarContainer.classList.add('collapsed'); // collapsedクラスを追加して非表示に
-            toggleSidebarButton.textContent = '聖地リスト ◀'; // ボタンのテキストも変更
+            toggleSidebarButton.style.transform = 'rotateY(180deg)'; // アイコンを回転
         } else {
             // PCサイズの場合は初期状態で表示 (念のため)
             animeSidebarContainer.classList.remove('collapsed');
-            toggleSidebarButton.textContent = '聖地リスト ▶';
+            toggleSidebarButton.style.transform = 'rotateY(0deg)'; // アイコンを元に戻す
         }
 
         // サイドバートグルボタンのクリックイベントリスナー
         toggleSidebarButton.addEventListener('click', () => {
             if (animeSidebarContainer.classList.contains('collapsed')) {
                 animeSidebarContainer.classList.remove('collapsed'); // 非表示クラスを削除して表示
-                toggleSidebarButton.textContent = '聖地リスト ▶'; // 開いた状態のテキスト
+                toggleSidebarButton.style.transform = 'rotateY(0deg)'; // 開いた状態のアイコン
             } else {
                 animeSidebarContainer.classList.add('collapsed'); // 表示クラスを追加して非表示に
-                toggleSidebarButton.textContent = '聖地リスト ◀'; // 閉じた状態のテキスト
+                toggleSidebarButton.style.transform = 'rotateY(180deg)'; // 閉じた状態のアイコン
             }
         });
 
