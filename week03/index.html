@@ -3,93 +3,146 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My First MapLibre Map</title>
+    <title>アニメ聖地マップ</title>
     <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
+        /* 全体設定: マージンとパディングをリセットし、ビューポート全体を使用 */
         body {
             margin: 0;
             padding: 0;
             height: 100vh;
-            display: flex;
-            overflow-x: hidden;
+            display: flex; /* flexboxで子要素を配置 */
+            overflow-x: hidden; /* 横方向のスクロールを無効化 */
         }
+        /* マップコンテナのスタイル */
         #map {
-            flex-grow: 1;
+            flex-grow: 1; /* 残りのスペースを全て占める */
             height: 100vh;
             width: 100%;
-            position: relative;
+            position: relative; /* 子要素の絶対配置の基準 */
         }
-        /* アニメサイドバーのスタイル変更 */
-        #anime-sidebar {
-            height: 100vh;
-            background-color: #f8f8f8;
-            border-left: 1px solid #ddd;
-            overflow-y: auto;
-            padding: 10px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
 
-            /* 変更点: PC表示時も絶対位置にする */
+        /* アニメ聖地88ロゴのスタイル */
+        #logo-container {
             position: absolute;
-            right: 0;
+            top: 10px; /* 上からの位置 */
+            left: 10px; /* 左からの位置 */
+            z-index: 200; /* 他の要素より手前に表示 */
+            background-color: rgba(255, 255, 255, 0.8); /* 背景を少し透明にしてマップが見えるように */
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        #logo-container a {
+            display: block; /* imgがブロック要素になるように */
+            line-height: 0; /* imgの下の余白をなくす */
+        }
+
+        #logo-container img {
+            height: 50px; /* アイコンの高さ。必要に応じて調整 */
+            width: auto; /* 幅は自動調整 */
+            cursor: pointer; /* マウスオーバー時にポインター表示 */
+        }
+
+
+        /* アニメサイドバーのコンテナのスタイル (ボタンとコンテンツを含む) */
+        #anime-sidebar-container {
+            height: 100vh;
+            width: 300px; /* サイドバーの固定幅 */
+            position: fixed; /* 画面右端に固定 */
             top: 0;
-            width: 300px; /* PCでの固定幅 */
+            right: -300px; /* サイドバーの幅分だけ右に隠す */
+            background-color: #EAF7CF; /* 背景色をEAF7CFに維持 */
+            border-left: 1px solid #ddd; /* 左ボーダー */
             box-shadow: -2px 0 5px rgba(0,0,0,0.2); /* 影を追加 */
-            z-index: 100; /* マップより手前に */
-
-            transform: translateX(0); /* 初期状態は表示 */
-            transition: transform 0.3s ease-in-out; /* スムーズなアニメーション */
+            z-index: 100; /* マップより手前に表示 */
+            transition: right 0.3s ease-in-out; /* スムーズなアニメーション */
+            display: flex; /* ボタンとコンテンツを内部で配置するため */
+            flex-direction: row; /* ボタンをコンテンツの左に配置するため */
+            color: #6D4DA3; /* サイドバー内の文字色を6D4DA3に維持 */
         }
-        /* サイドバーが非表示のときのクラス */
-        #anime-sidebar.collapsed {
-            transform: translateX(100%); /* 右に完全に隠す */
+        /* サイドバーコンテナが非表示のときのクラス */
+        #anime-sidebar-container.collapsed {
+            right: -300px; /* サイドバーの幅分だけ右に隠す */
+        }
+        /* サイドバーが開いているときのクラス */
+        #anime-sidebar-container:not(.collapsed) {
+            right: 0; /* 画面内に表示 */
         }
 
-        /* スマホ画面サイズでのサイドバーの調整（既存のメディアクエリは維持） */
+        /* 実際のサイドバーコンテンツのスタイル */
+        #anime-sidebar-content {
+            flex-grow: 1; /* 残りのスペースを全て占める */
+            overflow-y: auto; /* 縦方向のスクロールを有効化 */
+            padding: 10px;
+            box-sizing: border-box; /* パディングを幅に含める */
+            display: flex;
+            flex-direction: column; /* 子要素を縦に並べる */
+        }
+
+        /* スマホ画面サイズでのサイドバーの調整 */
         @media (max-width: 768px) {
-            #anime-sidebar {
-                /* position, right, top, z-index は共通化したので、ここで改めて書く必要はないが、
-                   メディアクエリの特異性のため明示的に書いても良い */
+            #anime-sidebar-container {
                 width: 80%; /* スマホでの幅を調整 */
+                right: -80%; /* 幅に合わせて隠す */
+            }
+            #anime-sidebar-container.collapsed {
+                right: -80%; /* 幅に合わせて隠す */
+            }
+            #logo-container {
+                top: 5px;
+                left: 5px;
+            }
+            #logo-container img {
+                height: 40px; /* スマホでのアイコンの高さ調整 */
             }
         }
 
-
+        /* アニメ検索入力フィールドのスタイル */
         #anime-search {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
             box-sizing: border-box;
+            background-color: rgba(109, 77, 163, 0.2); /* 検索ボックスの背景を6D4DA3の半透明に維持 */
+            border: 1px solid rgba(109, 77, 163, 0.5); /* 検索ボックスの枠線を6D4DA3の半透明に維持 */
+            color: #6D4DA3; /* 検索ボックスの文字色を6D4DA3に維持 */
         }
+        #anime-search::placeholder {
+            color: rgba(109, 77, 163, 0.7); /* プレースホルダーの文字色を6D4DA3の薄い色に維持 */
+        }
+
+        /* アニメリストのスタイル */
         #anime-list {
-            flex-grow: 1;
-            list-style: none;
+            flex-grow: 1; /* 残りのスペースを全て占める */
+            list-style: none; /* リストの黒点を削除 */
             padding: 0;
             margin: 0;
         }
         #anime-list li {
             padding: 8px 0;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
+            border-bottom: 1px solid rgba(109, 77, 163, 0.3); /* 下線を6D4DA3の半透明に維持 */
+            cursor: pointer; /* マウスオーバー時にポインター表示 */
+            color: #6D4DA3; /* リストアイテムの文字色を6D4DA3に維持 */
         }
         #anime-list li:hover {
-            background-color: #e0e0e0;
+            background-color: rgba(109, 77, 163, 0.2); /* ホバー時の背景色を6D4DA3の半透明に維持 */
         }
 
-        /* コントロールボタンのスタイル変更 */
+        /* コントロールボタンコンテナのスタイル */
         #controls {
             position: absolute;
             bottom: 0; /* 左下へ移動 */
-            left: 0;   /* 左下へ移動 */
+            left: 0;  /* 左下へ移動 */
             padding: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            z-index: 1;
+            background-color: rgba(255, 255, 255, 0.8); /* 半透明の白背景 */
+            z-index: 1; /* マップより手前に表示 */
             border-top-right-radius: 5px; /* 左下に移動したので角を調整 */
-            transition: all 0.3s ease-in-out;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
+            transition: all 0.3s ease-in-out; /* スムーズなアニメーション */
+            display: flex; /* flexboxで子要素を配置 */
+            flex-wrap: wrap; /* ボタンが複数行になっても折り返す */
+            gap: 5px; /* ボタン間のスペース */
         }
         /* コントロールボタンが折りたたまれたときのスタイル */
         #controls.collapsed {
@@ -102,17 +155,28 @@
             display: none;
         }
 
+        /* コントロールボタン全体のスタイル */
+        #controls button {
+            background-color: #2A3455; /* 地域ジャンプボタンの背景色を維持 */
+            color: #ABE8DB; /* 地域ジャンプボタンの文字色を維持 */
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 3px;
+            box-shadow: none;
+        }
+
         /* スマホ画面サイズでのコントロールボタンの調整 */
         @media (max-width: 768px) {
             #controls {
                 bottom: 10px; /* スマホでも左下へ移動 */
-                left: 10px;   /* スマホでも左下へ移動 */
+                left: 10px;  /* スマホでも左下へ移動 */
                 padding: 5px;
                 background-color: rgba(255, 255, 255, 0.8);
                 border-radius: 5px;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.2);
                 z-index: 10;
-                max-width: calc(100% - 20px);
+                max-width: calc(100% - 20px); /* 幅を画面サイズに合わせて調整 */
             }
             #controls button {
                 margin: 0;
@@ -121,51 +185,107 @@
             }
         }
 
-
-        /* 新しいトグルボタンのスタイル */
-        .toggle-button {
-            position: absolute;
-            background-color: #007bff;
-            color: white;
+        /* サイドバートグルボタンのスタイル */
+        #toggle-sidebar-button {
+            position: absolute; /* 親コンテナ (#anime-sidebar-container) を基準に配置 */
+            left: -120px; /* ボタンの幅と少しのマージン (例: 幅100px + マージン20px) */
+            top: 10px;
+            background-color: #EAF7CF; /* 背景色をEAF7CFに維持 */
+            color: #6D4DA3; /* 文字色を6D4DA3に維持 */
             border: none;
             padding: 8px 12px;
             cursor: pointer;
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 101;
+            z-index: 102; /* サイドバーコンテンツよりも手前に表示 */
+            /* transition は親コンテナで行うため不要 */
+            white-space: nowrap; /* ボタン内のテキストが改行されないように */
         }
-        #toggle-sidebar-button {
-            top: 10px;
-            right: 10px;
-        }
-        #toggle-controls-button {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            cursor: pointer;
-            border-radius: 3px;
-            box-shadow: none;
-        }
-        /* スマートフォンでのトグルボタンの位置調整 */
+
+        /* スマホ画面サイズでのトグルボタンの位置調整 */
         @media (max-width: 768px) {
             #toggle-sidebar-button {
-                top: 10px;
-                right: 10px;
+                left: -100px; /* スマホ用 (ボタンが小さい場合に合わせて調整) */
                 padding: 6px 10px;
                 font-size: 0.8em;
             }
-            #toggle-controls-button {
-                padding: 6px 10px;
-                font-size: 0.8em;
-            }
+        }
+
+        /* コントロールトグルボタンのスタイル (個別に指定しない場合は#controls buttonのスタイルが適用される) */
+        #toggle-controls-button {
+             /* #controls button のスタイルを継承するため、ここでの個別の指定は不要 */
+        }
+
+        /* --- スライドギャラリーのスタイル --- */
+        .popup-gallery {
+            position: relative;
+            width: 200px; /* 画像の幅に合わせて調整 */
+            height: auto;
+            margin-top: 10px;
+            overflow: hidden; /* 画像がはみ出さないように隠す */
+        }
+
+        .gallery-container {
+            display: flex; /* 画像を横並びにする */
+            transition: transform 0.3s ease-in-out; /* スライドアニメーション */
+        }
+
+        .gallery-item {
+            flex: 0 0 100%; /* 各アイテムがコンテナの100%幅を占める */
+            text-align: center;
+        }
+
+        .gallery-item img {
+            max-width: 100%;
+            height: auto;
+            display: block; /* 余分なスペースをなくす */
+            margin: 0 auto;
+        }
+
+        .gallery-nav-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.5); /* 半透明の背景 */
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            z-index: 1; /* 画像より手前に表示 */
+            font-size: 1.2em;
+            border-radius: 3px;
+        }
+
+        .gallery-nav-button.prev {
+            left: 5px;
+        }
+
+        .gallery-nav-button.next {
+            right: 5px;
+        }
+
+        .gallery-nav-button:disabled {
+            background-color: rgba(0, 0, 0, 0.2);
+            cursor: default;
+        }
+
+        .gallery-counter {
+            text-align: center;
+            font-size: 0.8em;
+            color: #555;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
+    <div id="logo-container">
+        <a href="https://animetourism88.com/88navi/" target="_blank">
+            <img src="http://googleusercontent.com/file_content/0" alt="アニメ聖地88ロゴ">
+        </a>
+    </div>
+
     <div id="controls">
-        <button id="toggle-controls-button">≡</button>
-        <button onclick="flyToRegion('tohoku')">東北</button>
+        <button id="toggle-controls-button">≡</button> <button onclick="flyToRegion('tohoku')">東北</button>
         <button onclick="flyToRegion('kanto')">関東</button>
         <button onclick="flyToRegion('chubu')">中部</button>
         <button onclick="flyToRegion('kinki')">近畿</button>
@@ -174,26 +294,33 @@
         <button onclick="showAllLocations()">全体</button>
     </div>
     <div id="map"></div>
-    <div id="anime-sidebar">
-        <input type="text" id="anime-search" placeholder="アニメ名を検索...">
-        <ul id="anime-list"></ul>
+    
+    <div id="anime-sidebar-container">
+        <button id="toggle-sidebar-button">聖地リスト ▶</button>
+
+        <div id="anime-sidebar-content">
+            <input type="text" id="anime-search" placeholder="アニメ名を検索...">
+            <ul id="anime-list"></ul>
+        </div>
     </div>
-    <button id="toggle-sidebar-button" class="toggle-button">聖地リスト ▶</button>
 
     <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
     <script>
+        // --- グローバル変数と初期設定 ---
+
+        // MapLibre GL JS のマップインスタンスを作成
         const map = new maplibregl.Map({
-            container: 'map',
+            container: 'map', // マップを表示するHTML要素のID
             style: {
                 version: 8,
                 sources: {
-                    'google-maps': {
+                    'google-maps': { // Googleマップタイルをソースとして追加
                         type: 'raster',
                         tiles: [
-                            'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'
+                            'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}' // GoogleマップのタイルURL
                         ],
                         tileSize: 256,
-                        attribution: '&copy; Google'
+                        attribution: '&copy; Google' // 著作権表示
                     }
                 },
                 layers: [
@@ -204,40 +331,55 @@
                     }
                 ]
             },
-            center: [140.3855, 35.7652], // 【アニメツーリズムインフォメーション】成田空港 (経度, 緯度)
-            zoom: 6
+            center: [140.3855, 35.7652], // 初期表示の中心座標 (成田空港)
+            zoom: 6 // 初期ズームレベル
         });
 
-        // これらの変数は、データが読み込まれた後に設定されます
+        // 聖地データを格納する配列
         let locations = [];
-        let uniqueAnimes = []; // 初期化はするが、データは後で設定
-        const markers = []; // マーカーを保持する配列
+        // ユニークなアニメタイトルとそれに関連する場所情報を格納する配列
+        let uniqueAnimes = [];
+        // 地図上のマーカーオブジェクトを格納する配列
+        const markers = [];
+        // ポップアップごとの現在のスライドインデックスを保持するMap
+        const popupGalleryStates = new Map();
 
-        // Function to fetch and process data
+        // --- データ読み込みと処理 ---
+
+        /**
+         * CSVファイルからアニメ聖地データを読み込み、処理する非同期関数。
+         * データの読み込みが完了したら、地図とサイドバーを初期化します。
+         */
         async function loadAnimeData() {
             try {
                 const response = await fetch('anime_locations.csv'); // CSVファイルへのパス
                 const csvText = await response.text();
 
-                locations = parseCsvData(csvText); // 新しい関数を呼び出す
+                // CSVデータをパースしてlocations配列に格納
+                locations = parseCsvData(csvText);
 
                 // データがロードされ、locationsが設定された後に、マップとサイドバーを初期化
                 initializeMapAndSidebar();
 
             } catch (error) {
-                console.error('Error loading anime data:', error);
+                console.error('アニメデータの読み込みエラー:', error);
                 alert('アニメデータの読み込みに失敗しました。ファイルが正しい形式で存在することを確認してください。');
             }
         }
 
-        // CSVデータをパースし、locations配列の形式に変換する関数
+        /**
+         * CSVテキストデータをパースし、locations配列の形式に変換する関数。
+         * 各地名に複数のアニメが関連付けられるようにデータを構造化します。
+         * @param {string} csvText - 読み込んだCSVデータの文字列
+         * @returns {Array<Object>} 整形された聖地データ配列
+         */
         function parseCsvData(csvText) {
             const lines = csvText.trim().split('\n');
-            // ヘッダー行が空の場合があるため、フィルターで空文字列を除外
+            // ヘッダー行を抽出し、トリムして空文字列を除外
             const headers = lines[0].split(',').map(header => header.trim()).filter(Boolean);
-            const dataRows = lines.slice(1);
+            const dataRows = lines.slice(1); // データ行を抽出
 
-            const tempLocationsMap = new Map(); // 地名ごとにデータをまとめるためのMap
+            const tempLocationsMap = new Map(); // 地名ごとにデータをまとめるための一時的なMap
 
             dataRows.forEach(row => {
                 // 空行や不正な行をスキップ
@@ -247,7 +389,7 @@
 
                 // ヘッダーと値の数が一致しない場合はスキップ
                 if (values.length !== headers.length) {
-                    console.warn('CSV行の列数がヘッダーと一致しません:', row);
+                    console.warn('CSV行の列数がヘッダーと一致しません。スキップします:', row);
                     return;
                 }
 
@@ -268,35 +410,42 @@
                     return;
                 }
 
+                // マップに地名がまだない場合、新しいエントリを作成
                 if (!tempLocationsMap.has(name)) {
                     tempLocationsMap.set(name, {
                         name: name,
                         lat: lat,
                         lng: lng,
-                        animes: []
+                        animes: [] // その地名に関連するアニメを格納する配列
                     });
                 }
+                // 既存の地名エントリにアニメ情報を追加
                 tempLocationsMap.get(name).animes.push({
                     title: title,
                     imageURL: imageURL
                 });
             });
 
+            // Mapの値を配列に変換して返す
             return Array.from(tempLocationsMap.values());
         }
 
-        // initializeMapAndSidebar 関数内の変更点
+        // --- マップとUIの初期化 ---
+
+        /**
+         * マップにマーカーを追加し、サイドバーを初期化する関数。
+         * データがロードされた後に呼び出されます。
+         */
         function initializeMapAndSidebar() {
             // アニメ名で重複を排除し、関連する全ての場所情報を保持するマップを作成
-            // この処理はlocationsがロードされた後に行う必要があるため、ここに移動
             const uniqueAnimesMap = new Map();
             locations.forEach(loc => {
                 loc.animes.forEach(anime => {
                     if (!uniqueAnimesMap.has(anime.title)) {
                         uniqueAnimesMap.set(anime.title, {
                             title: anime.title,
-                            imageURL: anime.imageURL, // 代表画像
-                            locations: []
+                            imageURL: anime.imageURL, // 代表画像 (ここでは使わないが構造として保持)
+                            locations: [] // そのアニメに関連する聖地のリスト
                         });
                     }
                     uniqueAnimesMap.get(anime.title).locations.push(loc);
@@ -306,18 +455,21 @@
             uniqueAnimes = Array.from(uniqueAnimesMap.values());
 
             // ポップアップ（吹き出し）を追加 - 成田空港
-            const popup = new maplibregl.Popup({ offset: 25 })
+            const naritaPopup = new maplibregl.Popup({ offset: 25 })
                 .setLngLat([140.3855, 35.7652])
                 .setHTML(`
                     <h3>【アニメツーリズムインフォメーション】成田空港</h3>
                     <img src="https://animetourism88.com/wp-content/uploads/2023/12/67A9521_re.jpg" alt="成田空港の画像" style="width: 200px; height: auto;">
-                    <p>日本の玄関口であり、アニメ聖地を巡る旅にとっての基点ともなる特別な存在として「アニメ聖地88」の “0番札所”に選定されている成田国際空港に、アニメ聖地への旅に関するさまざまな情報を提供する施設「アニメツーリズム インフォメーション」がオープン！</p>
+                    <p>日本の玄関口であり、アニメ聖地を巡る旅にとっての基点ともなる特別な存在として「アニメ聖地88」の “0番札所”に選定されている成田国際空港に、アニメツーリズム インフォメーションがオープン！</p>
                 `)
-                .addTo(map);
+                .addTo(map); // マップにポップアップを追加
 
+            // マップがロードされた後にマーカーを追加するイベントリスナー
             map.on('load', () => {
+                // 各聖地のマーカーアイコンのURL
                 const iconURL = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjhVvkhOzHWBWeS1FGWQIT_qMazJQojx-baEEQzBAgluLlDDtjvud9N1lyEx-kNm6fTut8MG3xcFmu2J6V2ZqdTqcxGqCimKYYRMat0VBF9DcCK2gtGqAZA5O-txWGqBofvUlzBGP1F9e4/s800/map_pin.png';
 
+                // locations配列の各聖地に対してマーカーを作成し、マップに追加
                 locations.forEach(loc => {
                     const markerElement = document.createElement('img');
                     markerElement.setAttribute('src', iconURL);
@@ -325,54 +477,189 @@
                     markerElement.style.height = '32px';
                     markerElement.style.cursor = 'pointer';
 
-                    let popupContent = `<h3>${loc.name}</h3><ul>`;
+                    // ポップアップのHTMLコンテンツを生成 (ギャラリー形式)
+                    let galleryItemsHtml = '';
                     loc.animes.forEach(anime => {
-                        popupContent += `<li>${anime.title}<br><img src="${anime.imageURL}" alt="${anime.title}" style="width: 180px;"></li>`;
+                        galleryItemsHtml += `
+                            <div class="gallery-item">
+                                <h4>${anime.title}</h4>
+                                <img src="${anime.imageURL}" alt="${anime.title}">
+                            </div>
+                        `;
                     });
-                    popupContent += `</ul>`;
 
+                    let popupContent = `<h3>${loc.name}</h3>`;
+                    if (loc.animes.length > 0) {
+                        popupContent += `
+                            <div class="popup-gallery">
+                                <div class="gallery-container" data-location-name="${loc.name}">
+                                    ${galleryItemsHtml}
+                                </div>
+                                ${loc.animes.length > 1 ? `
+                                <button class="gallery-nav-button prev" data-direction="-1">&#10094;</button>
+                                <button class="gallery-nav-button next" data-direction="1">&#10095;</button>
+                                ` : ''}
+                            </div>
+                            <div class="gallery-counter" data-location-name="${loc.name}"></div>
+                        `;
+                    } else {
+                        popupContent += `<p>この場所に関連するアニメ情報はありません。</p>`;
+                    }
+
+
+                    // マーカーを作成し、ポップアップを設定してマップに追加
+                    const markerPopup = new maplibregl.Popup().setHTML(popupContent);
+                    
                     const marker = new maplibregl.Marker({ element: markerElement, anchor: 'bottom' })
                         .setLngLat([loc.lng, loc.lat])
-                        .setPopup(
-                            new maplibregl.Popup().setHTML(popupContent)
-                        )
+                        .setPopup(markerPopup)
                         .addTo(map);
-                    markers.push({ location: loc, marker: marker }); // マーカーを配列に追加
+                    
+                    // ポップアップが開いたときにギャラリーを初期化
+                    markerPopup.on('open', () => {
+                        setupGallery(markerPopup.getElement(), loc.name, loc.animes.length);
+                    });
+
+                    // ポップアップが閉じたときにギャラリーの状態をリセット（任意）
+                    markerPopup.on('close', () => {
+                        popupGalleryStates.delete(loc.name);
+                    });
+
+                    markers.push({ location: loc, marker: marker, popup: markerPopup }); // マーカーとポップアップを配列に保持
                 });
 
-                // Narita Airport marker
+                // 成田空港の特別なマーカーを追加
                 const naritaIconURL = 'https://icooon-mono.com/i/icon_12730/icon_127301_64.png';
                 const naritaMarkerElement = document.createElement('img');
                 naritaMarkerElement.setAttribute('src', naritaIconURL);
                 naritaMarkerElement.style.width = '32px';
                 naritaMarkerElement.style.height = '32px';
                 naritaMarkerElement.style.cursor = 'pointer';
+                // 成田空港マーカーはmarkers配列に含めず、常に表示されるようにする
                 new maplibregl.Marker({ element: naritaMarkerElement, anchor: 'bottom' })
                     .setLngLat([140.3855, 35.7652])
                     .addTo(map);
 
-                // Adjust map to fit all locations on initial load
+                // 初回ロード時に全ての聖地と成田空港が画面に収まるように表示
                 showAllLocations();
+                // 初回ロード時に全てのピンを表示状態にする
+                filterMapMarkers(uniqueAnimes.map(a => a.title));
             });
 
-            // アニメリストの表示と検索機能の初期化は、uniqueAnimesが準備された後に行う
+            // アニメリストと検索機能の要素を取得
             const animeListElement = document.getElementById('anime-list');
             const animeSearchInput = document.getElementById('anime-search');
 
-            // 初期表示
-            displayAnimeList(uniqueAnimes);
+            // 初期表示: 全てのアニメをリストに表示し、全てのピンを表示
+            updateMapAndList(uniqueAnimes);
 
-            // 検索機能
+            // 検索機能: 検索入力フィールドの変更を監視し、リストとピンをフィルタリング
             animeSearchInput.addEventListener('input', (event) => {
-                const searchTerm = event.target.value.toLowerCase();
+                const searchTerm = event.target.value.toLowerCase(); // 入力された検索キーワードを小文字に変換
                 const filteredAnimes = uniqueAnimes.filter(anime =>
-                    anime.title.toLowerCase().includes(searchTerm)
+                    anime.title.toLowerCase().includes(searchTerm) // アニメタイトルにキーワードが含まれるかチェック
                 );
-                displayAnimeList(filteredAnimes);
+                updateMapAndList(filteredAnimes); // フィルタリングされたリストとピンを更新
             });
         }
 
-        // 地域ごとの中心座標 (これらの関数はどこにあっても問題ありません)
+        /**
+         * ポップアップ内のギャラリーをセットアップする関数。
+         * @param {HTMLElement} popupElement - ポップアップのDOM要素
+         * @param {string} locationName - 聖地の名前 (ギャラリーの状態管理に使用)
+         * @param {number} totalItems - ギャラリーアイテムの総数
+         */
+        function setupGallery(popupElement, locationName, totalItems) {
+            const galleryContainer = popupElement.querySelector('.gallery-container[data-location-name="' + locationName + '"]');
+            const prevButton = popupElement.querySelector('.gallery-nav-button.prev');
+            const nextButton = popupElement.querySelector('.gallery-nav-button.next');
+            const counterElement = popupElement.querySelector('.gallery-counter[data-location-name="' + locationName + '"]');
+
+            if (!galleryContainer || totalItems <= 0) return;
+
+            // ギャラリーの初期状態を設定
+            let currentSlide = popupGalleryStates.get(locationName) || 0;
+
+            function updateGallery() {
+                if (galleryContainer) {
+                    const offset = -currentSlide * 100; // 現在のスライドに応じてtranslateXを計算
+                    galleryContainer.style.transform = `translateX(${offset}%)`;
+                }
+                
+                // ナビゲーションボタンの有効/無効を切り替え
+                if (prevButton) prevButton.disabled = currentSlide === 0;
+                if (nextButton) nextButton.disabled = currentSlide === totalItems - 1;
+
+                // カウンターの更新
+                if (counterElement) {
+                    counterElement.textContent = `${currentSlide + 1} / ${totalItems}`;
+                }
+            }
+
+            // ナビゲーションボタンのイベントリスナーを設定
+            if (prevButton) {
+                prevButton.onclick = () => {
+                    if (currentSlide > 0) {
+                        currentSlide--;
+                        popupGalleryStates.set(locationName, currentSlide);
+                        updateGallery();
+                    }
+                };
+            }
+            if (nextButton) {
+                nextButton.onclick = () => {
+                    if (currentSlide < totalItems - 1) {
+                        currentSlide++;
+                        popupGalleryStates.set(locationName, currentSlide);
+                        updateGallery();
+                    }
+                };
+            }
+
+            // 初回表示
+            updateGallery();
+        }
+
+        /**
+         * 地図上のマーカーの表示・非表示をフィルタリングする関数。
+         * @param {Array<string>} targetAnimeTitles - 表示したいアニメタイトルの配列
+         */
+        function filterMapMarkers(targetAnimeTitles) {
+            markers.forEach(markerData => {
+                // ポップアップをすべて閉じる
+                markerData.popup.remove();
+
+                // この聖地に関連するアニメの中に、targetAnimeTitlesに含まれるものがあるかチェック
+                const isRelatedToTargetAnime = markerData.location.animes.some(anime =>
+                    targetAnimeTitles.includes(anime.title)
+                );
+
+                // マーカーのDOM要素を取得し、表示/非表示を切り替える
+                const markerElement = markerData.marker.getElement();
+                if (isRelatedToTargetAnime) {
+                    markerElement.style.display = ''; // 表示
+                } else {
+                    markerElement.style.display = 'none'; // 非表示
+                }
+            });
+        }
+
+        /**
+         * アニメリストの表示と地図上のピンのフィルタリングをまとめて行う関数。
+         * @param {Array<Object>} animesToDisplay - 表示するアニメとそれに関連する聖地データの配列
+         */
+        function updateMapAndList(animesToDisplay) {
+            // アニメリストの表示を更新
+            displayAnimeList(animesToDisplay);
+
+            // 表示するアニメタイトルを抽出し、それらに対応するピンのみを地図に表示
+            const animeTitlesToShow = animesToDisplay.map(anime => anime.title);
+            filterMapMarkers(animeTitlesToShow);
+        }
+
+        // --- マップ操作関数 ---
+
+        // 地域ごとの中心座標を定義
         const regionCenters = {
             'tohoku': [141.0, 39.0],
             'kanto': [139.75, 35.6667],
@@ -382,148 +669,151 @@
             'kyushu': [131.0, 33.0]
         };
 
-        function getRegionName(regionKey) {
-            switch (regionKey) {
-                case 'tohoku': return '東北';
-                case 'kanto': return '関東';
-                case 'chubu': return '中部';
-                case 'kinki': return '近畿';
-                case 'chugoku-shikoku': return '中国・四国';
-                case 'kyushu': return '九州';
-                default: return '';
-            }
-        }
-
+        /**
+         * 指定された地域に地図を移動させる関数。
+         * @param {string} region - 移動先の地域キー (例: 'kanto')
+         */
         function flyToRegion(region) {
             if (regionCenters.hasOwnProperty(region)) {
-                // ポップアップをすべて閉じる
+                // マップ上の開いているポップアップをすべて閉じる
                 markers.forEach(markerData => {
-                    markerData.marker.getPopup().remove();
+                    markerData.popup.remove();
                 });
+                // 全てのピンを表示状態に戻す
+                filterMapMarkers(uniqueAnimes.map(a => a.title));
+                // 検索ボックスをクリアし、リストも全表示に戻す
+                document.getElementById('anime-search').value = '';
+                displayAnimeList(uniqueAnimes);
+
                 map.flyTo({
-                    center: regionCenters[region],
-                    zoom: 7,
-                    essential: true
+                    center: regionCenters[region], // 指定地域の中心座標
+                    zoom: 7, // 適切なズームレベル
+                    essential: true // アニメーションを強制
                 });
             }
         }
 
-        // 全てのアニメ聖地と成田空港が画面に収まるように表示する関数
+        /**
+         * 全てのアニメ聖地と成田空港が画面に収まるように地図の表示範囲を調整する関数。
+         */
         function showAllLocations() {
-            const bounds = calculateAllLocationsBounds();
-            // ポップアップをすべて閉じる
+            const bounds = calculateAllLocationsBounds(); // 全体の境界を計算
+            // マップ上の開いているポップアップをすべて閉じる
             markers.forEach(markerData => {
-                markerData.marker.getPopup().remove();
+                markerData.popup.remove();
             });
-            map.fitBounds(bounds, { padding: 50 }); // 初期表示と同じパディング
+            // 全てのピンを表示状態にする
+            filterMapMarkers(uniqueAnimes.map(a => a.title));
+            // 検索ボックスをクリアし、リストも全表示に戻す
+            document.getElementById('anime-search').value = '';
+            displayAnimeList(uniqueAnimes);
+
+            map.fitBounds(bounds, { padding: 50 }); // 計算された境界にフィットするように表示
         }
 
-        // calculateAllLocationsBounds 関数 (locationsがグローバルで利用可能なので、ここでも問題ありません)
+        /**
+         * 全てのアニメ聖地と成田空港を含む境界ボックスを計算する関数。
+         * @returns {maplibregl.LngLatBounds} 計算された境界ボックス
+         */
         function calculateAllLocationsBounds() {
             const bounds = new maplibregl.LngLatBounds();
-            locations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
+            locations.forEach(loc => bounds.extend([loc.lng, loc.lat])); // 各聖地の座標を追加
             bounds.extend([140.3855, 35.7652]); // 成田空港の座標を追加
             return bounds;
         }
 
-        // アニメリストの表示
+        // --- サイドバーとUI要素の操作 ---
+
+        /**
+         * 指定されたアニメのリストをサイドバーに表示する関数。
+         * 各アニメをクリックすると、関連する聖地が地図上に表示されます。
+         * @param {Array<Object>} animesToDisplay - 表示するアニメの配列
+         */
         function displayAnimeList(animesToDisplay) {
             const animeListElement = document.getElementById('anime-list');
-            animeListElement.innerHTML = '';
+            animeListElement.innerHTML = ''; // リストをクリア
             animesToDisplay.forEach(anime => {
                 const listItem = document.createElement('li');
-                listItem.textContent = anime.title;
+                listItem.textContent = anime.title; // アニメタイトルを設定
                 listItem.addEventListener('click', () => {
-                    const animeLocations = anime.locations;
+                    // サイドバーが閉じている場合、開く (animeSidebarContainerを参照)
+                    if (animeSidebarContainer.classList.contains('collapsed')) {
+                        animeSidebarContainer.classList.remove('collapsed');
+                        toggleSidebarButton.textContent = '聖地リスト ▶';
+                    }
 
-                    // ポップアップをすべて閉じる
+                    const animeLocations = anime.locations; // そのアニメに関連する聖地
+
+                    // マップ上の開いているポップアップをすべて閉じる
                     markers.forEach(markerData => {
-                        markerData.marker.getPopup().remove();
+                        markerData.popup.remove();
                     });
 
+                    // このアニメに関連するピンのみを表示する
+                    filterMapMarkers([anime.title]);
+
                     if (animeLocations.length === 1) {
-                        // 単一の聖地の場合：特定のズームレベルで表示
+                        // 単一の聖地の場合：特定のズームレベルで移動し、そのピンのポップアップを開く
                         const loc = animeLocations[0];
                         map.flyTo({
                             center: [loc.lng, loc.lat],
-                            zoom: 13, // ★ここを希望のズームレベルに調整してください (例: 8, 9, 10など)
+                            zoom: 13, // 適度なズームレベルに調整
                             essential: true
                         });
                         // 該当するマーカーのポップアップを開く
                         const targetMarkerData = markers.find(m => m.location.lng === loc.lng && m.location.lat === loc.lat);
                         if (targetMarkerData) {
-                            targetMarkerData.marker.getPopup().addTo(map);
+                            targetMarkerData.popup.addTo(map);
+                            // ポップアップを開いた後、ギャラリーを初期化
+                            setupGallery(targetMarkerData.popup.getElement(), loc.name, loc.animes.length);
                         }
 
                     } else if (animeLocations.length > 1) {
-                        // 複数の聖地の場合：全てが画面に収まるように表示
+                        // 複数の聖地の場合：全てが画面に収まるように表示。ポップアップは自動で開かない。
                         const bounds = new maplibregl.LngLatBounds();
                         animeLocations.forEach(loc => {
                             bounds.extend([loc.lng, loc.lat]);
                         });
-                        map.fitBounds(bounds, { padding: 50, essential: true }); // paddingも適宜調整
-
-                        // 全ての関連ポップアップを開く
-                        markers.forEach(markerData => {
-                            if (animeLocations.some(al => al.lng === markerData.location.lng && al.lat === markerData.location.lat)) {
-                                markerData.marker.getPopup().addTo(map);
-                            }
-                        });
+                        map.fitBounds(bounds, { padding: 50, essential: true }); // パディングも適宜調整
+                        // ポップアップは自動で開かないので、setupGalleryは呼び出さない
                     }
                 });
-                animeListElement.appendChild(listItem);
+                animeListElement.appendChild(listItem); // リストアイテムを追加
             });
         }
 
         // サイドバーのトグル機能
-        const animeSidebar = document.getElementById('anime-sidebar');
+        const animeSidebarContainer = document.getElementById('anime-sidebar-container');
         const toggleSidebarButton = document.getElementById('toggle-sidebar-button');
+        const animeSidebarContent = document.getElementById('anime-sidebar-content');
+
 
         // 初期状態でスマホではサイドバーを隠す (PCではデフォルトで表示)
+        // そして、ボタンの位置も初期状態に合わせて設定
         if (window.innerWidth <= 768) {
-            animeSidebar.classList.add('collapsed');
+            animeSidebarContainer.classList.add('collapsed'); // collapsedクラスを追加して非表示に
             toggleSidebarButton.textContent = '聖地リスト ◀'; // ボタンのテキストも変更
         } else {
             // PCサイズの場合は初期状態で表示 (念のため)
-            animeSidebar.classList.remove('collapsed');
+            animeSidebarContainer.classList.remove('collapsed');
             toggleSidebarButton.textContent = '聖地リスト ▶';
         }
 
+        // サイドバートグルボタンのクリックイベントリスナー
         toggleSidebarButton.addEventListener('click', () => {
-            if (animeSidebar.classList.contains('collapsed')) {
-                animeSidebar.classList.remove('collapsed');
+            if (animeSidebarContainer.classList.contains('collapsed')) {
+                animeSidebarContainer.classList.remove('collapsed'); // 非表示クラスを削除して表示
                 toggleSidebarButton.textContent = '聖地リスト ▶'; // 開いた状態のテキスト
             } else {
-                animeSidebar.classList.add('collapsed');
+                animeSidebarContainer.classList.add('collapsed'); // 表示クラスを追加して非表示に
                 toggleSidebarButton.textContent = '聖地リスト ◀'; // 閉じた状態のテキスト
             }
         });
 
-        // 地域ジャンプボタンのトグル機能
-        const controlsContainer = document.getElementById('controls');
-        const toggleControlsButton = document.getElementById('toggle-controls-button');
+        // --- アプリケーションの開始 ---
 
-        // 初期状態でスマホではコントロールを折りたたむ (PCではデフォルトで展開)
-        if (window.innerWidth <= 768) {
-            controlsContainer.classList.add('collapsed');
-            toggleControlsButton.textContent = '≡';
-        } else {
-            controlsContainer.classList.remove('collapsed');
-            toggleControlsButton.textContent = '×'; // PCでのデフォルト表示
-        }
-
-        toggleControlsButton.addEventListener('click', () => {
-            controlsContainer.classList.toggle('collapsed');
-            if (controlsContainer.classList.contains('collapsed')) {
-                toggleControlsButton.textContent = '≡'; // 閉じた状態
-            } else {
-                toggleControlsButton.textContent = '×'; // 開いた状態
-            }
-        });
-
-        // ファイル読み込みを開始する
+        // 全ての処理の最初にアニメデータを読み込む
         loadAnimeData();
-
     </script>
 </body>
 </html>
